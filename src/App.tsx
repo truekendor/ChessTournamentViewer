@@ -1,39 +1,11 @@
 import { Chessground } from '@lichess-org/chessground'
-import { Chess } from 'chess.js'
-
-import './App.css'
+import { Chess, Move, type Square } from 'chess.js'
 import { useEffect, useRef, useState } from 'react'
-import { type Api } from '@lichess-org/chessground/api'
 import { CCCWebSocket } from './websocket'
+import type { Api } from '@lichess-org/chessground/api'
 import type { CCCLiveInfo, CCCEngine, CCCMessage, CCCEventUpdate } from './types'
-import type { Key } from '@lichess-org/chessground/types'
 import type { DrawShape } from '@lichess-org/chessground/draw'
-
-type EngineMap = Record<string, CCCEngine>
-
-type EngineImages = Record<string, string>
-
-function load_engine_images(engines: CCCEngine[]): EngineImages {
-
-    const engine_images: EngineImages = {}
-
-    const base_url = "https://images.chesscomfiles.com/chess-themes/computer_chess_championship/avatars/"
-
-    const formats = [
-        "sm_%s.png",
-        "%s.png",
-        "sm_%s@2x.png",
-        "%s@2x.png",
-        "lrg_%s.png",
-        "lrg_%s@2x.png",
-    ]
-
-    for (const engine of engines) {
-        engine_images[engine.id] = base_url + formats[2].replace("%s", engine.imageUrl)
-    }
-
-    return engine_images
-}
+import './App.css'
 
 function App() {
 
@@ -41,19 +13,15 @@ function App() {
     const boardRef = useRef<Api>(null)
     const whiteArrow = useRef<[DrawShape, DrawShape]>(null)
     const blackArrow = useRef<[DrawShape, DrawShape]>(null)
+    const game = useRef(new Chess())
+    const ws = useRef(new CCCWebSocket("wss://ccc-api.gcp-prod.chess.com/ws"))
 
-    const [game, setGame] = useState(new Chess())
-    const [ws] = useState(new CCCWebSocket("wss://ccc-api.gcp-prod.chess.com/ws"))
-
-    const [engines, setEngines] = useState<EngineMap>({})
+    const [cccEvent, setCccEvent] = useState<CCCEventUpdate>()
     const [white, setWhite] = useState<CCCEngine>()
     const [black, setBlack] = useState<CCCEngine>()
-    const [engineImages, setEngineImages] = useState<EngineImages>({})
 
     const [liveInfoWhite, setLiveInfoWhite] = useState<CCCLiveInfo>()
     const [liveInfoBlack, setLiveInfoBlack] = useState<CCCLiveInfo>()
-
-    const [cccEvent, setCccEvent] = useState<CCCEventUpdate>()
 
     function getArrows() {
         const arrows: DrawShape[] = []
@@ -64,202 +32,100 @@ function App() {
         return arrows;
     }
 
+    function updateBoard(lastMove: [Square, Square]) {
+        boardRef.current?.set({
+            fen: game.current.fen(),
+            lastMove: lastMove,
+            drawable: {
+                // @ts-ignore
+                brushes: {
+                    white: {
+                        key: "white",
+                        color: "#fff",
+                        opacity: 0.7,
+                        lineWidth: 10,
+                    },
+                    black: {
+                        key: "black",
+                        color: "#000",
+                        opacity: 0.7,
+                        lineWidth: 10,
+                    }
+                },
+                enabled: false,
+                eraseOnMovablePieceClick: false,
+                shapes: getArrows()
+            }
+        })
+    }
+
     function handleMessage(msg: CCCMessage) {
+        let lastMove: Move
 
-        if (msg.type === "eventUpdate") {
-            setCccEvent(msg)
+        switch (msg.type) {
 
-            const engines: EngineMap = {}
-            for (const engine of msg.tournamentDetails.engines)
-                engines[engine.id] = engine
-            setEngines(engines)
+            case "eventUpdate":
+                setCccEvent(msg)
 
-            const present = msg.tournamentDetails.schedule.present
-            const white_engine = engines[present.whiteId]
-            const black_engine = engines[present.blackId]
-            setWhite(white_engine)
-            setBlack(black_engine)
+                const currentGame = msg.tournamentDetails.schedule.present
+                setWhite(msg.tournamentDetails.engines.find(engine => engine.id === currentGame.whiteId))
+                setBlack(msg.tournamentDetails.engines.find(engine => engine.id === currentGame.blackId))
 
-            setEngineImages(load_engine_images(msg.tournamentDetails.engines))
-        }
+                break;
 
-        if (msg.type === "gameUpdate") {
-            if (!boardRef.current) {
-                console.warn("Received 'gameUpdate' event, but the board isn't ready yet")
-                return;
-            }
+            case "gameUpdate":
+                game.current.loadPgn(msg.gameDetails.pgn)
+                lastMove = game.current.history({ verbose: true }).at(-1)!!
+                updateBoard([lastMove.from, lastMove.to])
 
-            game.loadPgn(msg.gameDetails.pgn)
+                break;
 
-            const history = game.history({ verbose: true })
-            const last_move = history[history.length - 1]
+            case "liveInfo":
+                const pv = msg.info.pv.split(" ")
+                const nextMove = pv[0]
+                const secondNextMove = pv.length > 1 ? pv[1] : pv[0]
+                const arrow: [DrawShape, DrawShape] = [
+                    { orig: nextMove.slice(0, 2) as Square, dest: nextMove.slice(2, 4) as Square, brush: msg.info.color },
+                    { orig: secondNextMove.slice(0, 2) as Square, dest: secondNextMove.slice(2, 4) as Square, brush: msg.info.color },
+                ]
 
-            boardRef.current.set({
-                fen: game.fen(),
-                lastMove: [last_move.from, last_move.to],
-                drawable: {
-                    brushes: {
-                        white: {
-                            key: "white",
-                            color: "#fff",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        },
-                        black: {
-                            key: "black",
-                            color: "#000",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        }
-                    },
-                    enabled: false,
-                    eraseOnMovablePieceClick: false,
-                    shapes: getArrows()
+                if (msg.info.color == "white") {
+                    setLiveInfoWhite(msg)
+                    whiteArrow.current = arrow
                 }
-            })
-        }
-
-        if (msg.type === "clocks") {
-            return
-        }
-
-        if (msg.type === "liveInfo") {
-            const pv = msg.info.pv.split(" ")
-
-            if (msg.info.color == "white") {
-                setLiveInfoWhite(msg)
-
-                if (pv.length > 1)
-                    whiteArrow.current = [
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "white"
-                        },
-                        {
-                            orig: pv[1].slice(0, 2) as Key,
-                            dest: pv[1].slice(2, 4) as Key,
-                            brush: "white"
-                        }
-                    ]
-                else
-                    whiteArrow.current = [
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "white"
-                        },
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "white"
-                        }
-                    ]
-            }
-            else {
-                setLiveInfoBlack(msg)
-                if (pv.length > 1)
-                    blackArrow.current = [
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "black"
-                        },
-                        {
-                            orig: pv[1].slice(0, 2) as Key,
-                            dest: pv[1].slice(2, 4) as Key,
-                            brush: "black"
-                        }
-                    ]
-                else
-                    blackArrow.current = [
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "black"
-                        },
-                        {
-                            orig: pv[0].slice(0, 2) as Key,
-                            dest: pv[0].slice(2, 4) as Key,
-                            brush: "black"
-                        }
-                    ]
-            }
-
-            if (!boardRef.current) {
-                console.warn("Received 'liveInfo' event, but the board isn't ready yet")
-                return;
-            }
-
-            const history = game.history({ verbose: true })
-            const last_move = history[history.length - 1]
-
-            boardRef.current.set({
-                fen: game.fen(),
-                lastMove: [last_move.from, last_move.to],
-                drawable: {
-                    brushes: {
-                        white: {
-                            key: "white",
-                            color: "#fff",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        },
-                        black: {
-                            key: "black",
-                            color: "#000",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        }
-                    },
-                    enabled: false,
-                    eraseOnMovablePieceClick: false,
-                    shapes: getArrows()
+                else {
+                    setLiveInfoBlack(msg)
+                    blackArrow.current = arrow
                 }
-            })
-        }
 
-        if (msg.type === "newMove") {
-            if (!boardRef.current) {
-                console.warn("Received 'newMove' event, but the board isn't ready yet")
-                return;
-            }
+                lastMove = game.current.history({ verbose: true }).at(-1)!!
+                updateBoard([lastMove.from, lastMove.to])
 
-            const from = msg.move.slice(0, 2) as Key
-            const to = msg.move.slice(2, 4) as Key
-            const promo = msg.move.length > 4 ? msg.move[4] : undefined
+                break;
 
-            if (game.turn() == "w" && whiteArrow.current) {
-                whiteArrow.current = [whiteArrow.current[1], whiteArrow.current[0]]
-            } else if (blackArrow.current) {
-                blackArrow.current = [blackArrow.current[1], blackArrow.current[0]]
-            }
+            case "eventsListUpdate":
 
-            game.move({ from, to, promotion: promo as any })
+                break;
 
-            boardRef.current.set({
-                fen: game.fen(),
-                lastMove: [from, to],
-                drawable: {
-                    brushes: {
-                        white: {
-                            key: "white",
-                            color: "#fff",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        },
-                        black: {
-                            key: "black",
-                            color: "#000",
-                            opacity: 0.7,
-                            lineWidth: 10,
-                        }
-                    },
-                    enabled: false,
-                    eraseOnMovablePieceClick: false,
-                    shapes: getArrows()
+            case "clocks":
+
+                break;
+
+            case "newMove":
+                const from = msg.move.slice(0, 2) as Square
+                const to = msg.move.slice(2, 4) as Square
+                const promo = msg.move?.[4]
+
+                if (game.current.turn() == "w" && whiteArrow.current) {
+                    whiteArrow.current = [whiteArrow.current[1], whiteArrow.current[0]]
+                } else if (blackArrow.current) {
+                    blackArrow.current = [blackArrow.current[1], blackArrow.current[0]]
                 }
-            })
+
+                game.current.move({ from, to, promotion: promo as any })
+                updateBoard([from, to])
+
+                break
         }
     }
 
@@ -267,30 +133,28 @@ function App() {
         if (boardRef.current || !boardElementRef.current) return;
 
         boardRef.current = Chessground(boardElementRef.current, {
-            fen: game.fen(),
+            fen: game.current.fen(),
             orientation: 'white',
-            coordinates: true,
-            draggable: { enabled: true },
             movable: { free: false, color: undefined, dests: undefined },
             selectable: { enabled: false },
         })
 
-        ws.connect(handleMessage)
+        ws.current.connect(handleMessage)
 
-        return () => ws.disconnect();
+        return () => ws.current.disconnect();
     }, [boardElementRef.current])
 
-    const sortedEngines = Object.keys(engines).map(id => engines[id]).sort((a, b) => Number(b.points) - Number(a.points))
+    const sortedEngines = cccEvent?.tournamentDetails.engines.sort((a, b) => Number(b.points) - Number(a.points)) ?? []
 
     return (
         <div className="app">
 
             <div className="boardWindow">
-                {liveInfoBlack && black && <EngineComponent info={liveInfoBlack} engine={black} imageSrc={engineImages[black.id]} />}
+                {liveInfoBlack && black && <EngineComponent info={liveInfoBlack} engine={black} />}
 
                 <div ref={boardElementRef} className="board"></div>
 
-                {liveInfoWhite && white && <EngineComponent info={liveInfoWhite} engine={white} imageSrc={engineImages[white.id]} />}
+                {liveInfoWhite && white && <EngineComponent info={liveInfoWhite} engine={white} />}
             </div>
 
             <div className="standingsWindow">
@@ -316,14 +180,13 @@ function App() {
 
 type EngineComponentProps = {
     info: CCCLiveInfo
-    imageSrc: string
     engine: CCCEngine
 }
 
-function EngineComponent({ engine, info, imageSrc }: EngineComponentProps) {
+function EngineComponent({ engine, info }: EngineComponentProps) {
     return (
         <div className="engine">
-            <img src={imageSrc} />
+            <img src={"https://images.chesscomfiles.com/chess-themes/computer_chess_championship/avatars/" + engine.imageUrl + ".png"} />
             <span className="engine-name">{engine.name}</span>
             <span className="engine-eval">{info.info.score}</span>
             <span className="engine-field"> D: <span>{info.info.depth} / {info.info.seldepth}</span></span>
