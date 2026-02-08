@@ -6,8 +6,16 @@ import type { Api } from '@lichess-org/chessground/api'
 import type { CCCLiveInfo, CCCEngine, CCCMessage, CCCEventUpdate, CCCEventsListUpdate, CCCClocks } from './types'
 import type { DrawShape } from '@lichess-org/chessground/draw'
 import './App.css'
+import { Line } from 'react-chartjs-2'
+import { CategoryScale, Chart, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
+import { EngineComponent } from './components/EngineComponent'
+import { StandingsTable } from './components/StandingsTable'
+import { GameGraph } from './components/GameGraph'
+import type { Config } from '@lichess-org/chessground/config'
 
 const CLOCK_UPDATE_MS = 25
+
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
 function App() {
 
@@ -24,19 +32,17 @@ function App() {
     const [black, setBlack] = useState<CCCEngine>()
     const [clocks, setClocks] = useState<CCCClocks>()
 
-    const [liveInfoWhite, setLiveInfoWhite] = useState<CCCLiveInfo>()
-    const [liveInfoBlack, setLiveInfoBlack] = useState<CCCLiveInfo>()
+    const [liveInfosWhite, setLiveInfosWhite] = useState<(CCCLiveInfo | undefined)[]>([])
+    const [liveInfosBlack, setLiveInfosBlack] = useState<(CCCLiveInfo | undefined)[]>([])
 
-    function updateBoard(lastMove: [Square, Square]) {
+    function updateBoard(lastMove: [Square, Square], arrowsOnly: boolean = false) {
         const arrows: DrawShape[] = []
         if (whiteArrow.current)
             arrows.push(whiteArrow.current[0])
         if (blackArrow.current)
             arrows.push(blackArrow.current[0])
 
-        boardRef.current?.set({
-            fen: game.current.fen(),
-            lastMove: lastMove,
+        let config: Config = {
             drawable: {
                 // @ts-ignore
                 brushes: {
@@ -57,7 +63,14 @@ function App() {
                 eraseOnMovablePieceClick: false,
                 shapes: arrows,
             }
-        })
+        }
+
+        if (!arrowsOnly) {
+            config.fen = game.current.fen()
+            config.lastMove = lastMove
+        }
+
+        requestAnimationFrame(() => boardRef.current?.set(config))
     }
 
     function updateClocks() {
@@ -95,6 +108,9 @@ function App() {
                 break;
 
             case "gameUpdate":
+                setLiveInfosWhite([])
+                setLiveInfosBlack([])
+
                 game.current.loadPgn(msg.gameDetails.pgn)
                 lastMove = game.current.history({ verbose: true }).at(-1)!!
                 updateBoard([lastMove.from, lastMove.to])
@@ -106,21 +122,29 @@ function App() {
                 const nextMove = pv[0]
                 const secondNextMove = pv.length > 1 ? pv[1] : pv[0]
                 const arrow: [DrawShape, DrawShape] = [
-                    { orig: nextMove.slice(0, 2) as Square, dest: nextMove.slice(2, 4) as Square, brush: msg.info.color },
-                    { orig: secondNextMove.slice(0, 2) as Square, dest: secondNextMove.slice(2, 4) as Square, brush: msg.info.color },
+                    { orig: nextMove.slice(0, 2) as Square || "a1", dest: nextMove.slice(2, 4) as Square || "a1", brush: msg.info.color },
+                    { orig: secondNextMove.slice(0, 2) as Square || "a1", dest: secondNextMove.slice(2, 4) as Square || "a1", brush: msg.info.color },
                 ]
 
                 if (msg.info.color == "white") {
-                    setLiveInfoWhite(msg)
+                    setLiveInfosWhite(data => {
+                        const newData = [...data]
+                        newData[msg.info.ply] = msg
+                        return newData
+                    })
                     whiteArrow.current = arrow
                 }
                 else {
-                    setLiveInfoBlack(msg)
+                    setLiveInfosBlack(data => {
+                        const newData = [...data]
+                        newData[msg.info.ply] = msg
+                        return newData
+                    })
                     blackArrow.current = arrow
                 }
 
                 lastMove = game.current.history({ verbose: true }).at(-1)!!
-                updateBoard([lastMove.from, lastMove.to])
+                updateBoard([lastMove.from, lastMove.to], true)
 
                 break;
 
@@ -169,62 +193,26 @@ function App() {
         return () => clearInterval(clockTimer)
     }, [])
 
-    const sortedEngines = cccEvent?.tournamentDetails.engines.sort((a, b) => Number(b.points) - Number(a.points)) ?? []
+    const latestLiveInfoBlack = liveInfosBlack.at(-1)
+    const latestLiveInfoWhite = liveInfosWhite.at(-1)
 
     return (
         <div className="app">
 
             <div className="boardWindow">
-                {liveInfoBlack && black && clocks && <EngineComponent info={liveInfoBlack} engine={black} time={Number(clocks.btime)} />}
+                {latestLiveInfoBlack && black && clocks && <EngineComponent info={latestLiveInfoBlack} engine={black} time={Number(clocks.btime)} />}
 
                 <div ref={boardElementRef} className="board"></div>
 
-                {liveInfoWhite && white && clocks && <EngineComponent info={liveInfoWhite} engine={white} time={Number(clocks.wtime)} />}
+                {latestLiveInfoWhite && white && clocks && <EngineComponent info={latestLiveInfoWhite} engine={white} time={Number(clocks.wtime)} />}
             </div>
 
-            <div className="standingsWindow">
+            {white && black && <div className="standingsWindow">
                 <h2>Standings</h2>
-                <div className="standings">
-                    {sortedEngines.map((engine, index) => {
-                        const playedGames = Number(cccEvent?.tournamentDetails.schedule.past.filter(game => game.blackId === engine.id || game.whiteId === engine.id).length);
-                        return (
-                            <div key={engine.id} className="standingsEntry">
-                                <div>#{index + 1}</div>
-                                <div>{engine.name}</div>
-                                <div className="standingsScore">{engine.points} / {playedGames}.00 ({engine.perf}%)</div>
-                                <div>{engine.rating}</div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
+                <StandingsTable engines={cccEvent?.tournamentDetails.engines ?? []} />
+                <GameGraph black={black} white={white} liveInfosBlack={liveInfosBlack} liveInfosWhite={liveInfosWhite} />
+            </div>}
 
-        </div>
-    )
-}
-
-type EngineComponentProps = {
-    info: CCCLiveInfo
-    engine: CCCEngine
-    time: number
-}
-
-function EngineComponent({ engine, info, time }: EngineComponentProps) {
-
-    const hundreds = String(Math.floor(time / 10) % 100).padStart(2, "0");
-    const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
-    const minutes = String(Math.floor(time / (1000 * 60)) % 60).padStart(2, "0");
-    const timeString = `${minutes}:${seconds}.${hundreds}`
-
-    return (
-        <div className="engine">
-            <img src={"https://images.chesscomfiles.com/chess-themes/computer_chess_championship/avatars/" + engine.imageUrl + ".png"} />
-            <span className="engineName">{engine.name}</span>
-            <span className="engineEval">{info.info.score}</span>
-            <span className="engineField"> D: <span>{info.info.depth} / {info.info.seldepth}</span></span>
-            <span className="engineField"> N: <span>{info.info.nodes}</span></span>
-            <span className="engineField"> NPS: <span>{info.info.speed}</span></span>
-            <span className="engineField"> T: <span>{timeString}</span></span>
         </div>
     )
 }

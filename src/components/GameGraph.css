@@ -1,0 +1,12 @@
+.gameGraph {
+    margin-top: 1rem;
+}
+
+.modeSelectorList {
+    width: 100%;
+    display: flex;
+}
+
+.modeSelector {
+    flex-grow: 1;
+}

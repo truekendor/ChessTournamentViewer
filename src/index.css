@@ -4,4 +4,26 @@ body {
     padding: 0;
     font-family: sans-serif;
     box-sizing: border-box;
+
+    background: #212121;
+}
+
+* {
+    color: #FAFAFA;
+}
+
+button {
+    outline: none;
+    border: none;
+    background: #424242;
+    padding: 0.5rem 0.625rem;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #565656;
+}
+
+button.active {
+    background: #505050;
 }

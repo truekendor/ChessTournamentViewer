@@ -1,5 +1,5 @@
 :root {
-  --standings-width: 28rem;
+  --standings-width: 30rem;
   --board-size: min(calc(100vh - 12rem), calc(100vw - var(--standings-width)));
 }
 
@@ -10,12 +10,13 @@
   overflow: hidden;
 
   display: grid;
-  grid-template-columns: 1fr calc(var(--standings-width) - 3rem);
+  grid-template-columns: var(--board-size) 1fr;
   gap: 1rem;
 }
 
 .boardWindow {
   max-height: 100%;
+  width: var(--board-size);
 }
 
 .board {
@@ -23,34 +24,6 @@
   height: var(--board-size);
 }
 
-.standingsEntry {
-  display: grid;
-  grid-template-columns: 2rem 1fr 13rem 3rem;
-  padding-right: 1px;
-}
-
-.standingsScore {
-  text-align: right;
-  margin-right: 1rem;
-}
-
-.engine {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.engineName {
-  min-width: 60px;
-  font-weight: bold;
-}
-
-.engineEval {
-  min-width: 60px;
-}
-
-.engineField {
-  min-width: 90px;
-  text-align: left;
-  white-space: nowrap;
+.board cg-board {
+  background-color: #8ca2ad;
 }
