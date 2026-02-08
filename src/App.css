@@ -1,0 +1,56 @@
+:root {
+  --standings-width: 28rem;
+  --board-size: min(calc(100vh - 12rem), calc(100vw - var(--standings-width)));
+}
+
+.app {
+  margin: 1rem;
+  width: min(calc(100vw - 2rem), calc(var(--board-size) + var(--standings-width) - 1rem));
+  height: calc(100vh - 2rem);
+  overflow: hidden;
+
+  display: grid;
+  grid-template-columns: 1fr calc(var(--standings-width) - 2rem);
+  gap: 1rem;
+}
+
+.boardWindow {
+  max-height: 100%;
+}
+
+.board {
+  width: var(--board-size);
+  height: var(--board-size);
+  margin-top: 4px;
+}
+
+.standingsEntry {
+  display: grid;
+  grid-template-columns: 2rem 1fr 13rem 3rem;
+}
+
+.standingsScore {
+  text-align: right;
+  margin-right: 1rem;
+}
+
+.engine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-name {
+  min-width: 60px;
+  font-weight: bold;
+}
+
+.engine-eval {
+  min-width: 60px;
+}
+
+.engine-field {
+  min-width: 90px;
+  text-align: left;
+  white-space: nowrap;
+}
