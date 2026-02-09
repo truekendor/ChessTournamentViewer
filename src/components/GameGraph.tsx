@@ -123,7 +123,16 @@ export function GameGraph({
                         tooltip: { enabled: false },
                     },
                     scales: {
-                        y: { beginAtZero: true },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: (context) => {
+                                    const val = context.tick.value;
+                                    if (mode === 0 && (val === 1 || val === -1 || val === 0)) return 'rgba(0, 0, 0, 0.5)';
+                                    return 'rgba(0, 0, 0, 0.05)';
+                                }
+                            }
+                        },
                     },
                 }}
                 data={data}

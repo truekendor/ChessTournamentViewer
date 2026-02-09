@@ -1,5 +1,8 @@
-.standingsWindow h2 {
-  margin-top: 0.75rem;
+.standingsWindow {
+  margin-top: 0.5rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
 }
 
 .standings {

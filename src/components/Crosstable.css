@@ -45,6 +45,7 @@
   color: #E53935;
 }
 
-.crosstable .h2h span.draw {
+.crosstable .h2h span.draw,
+.crosstable .h2h span.tbd {
   color: #A1A1A1;
 }

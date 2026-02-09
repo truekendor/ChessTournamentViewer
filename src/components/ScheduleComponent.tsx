@@ -17,7 +17,9 @@ export function ScheduleComponent({ engines, event, requestEvent }: ScheduleComp
     useEffect(() => {
         if (!scheduleRef.current || !currentGameRef.current) return
 
-        scheduleRef.current.scrollTop = currentGameRef.current.offsetTop
+        console.log(scheduleRef.current.offsetTop, scheduleRef.current.clientTop, scheduleRef.current.scrollTop)
+        console.log(currentGameRef.current.offsetTop, currentGameRef.current.clientTop, currentGameRef.current.scrollTop)
+        scheduleRef.current.scrollTop = currentGameRef.current.offsetTop - scheduleRef.current.clientHeight / 2
     }, [scheduleRef.current, currentGameRef.current])
 
     const gamesList = [

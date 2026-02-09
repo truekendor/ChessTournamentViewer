@@ -4,6 +4,10 @@
   --schedule-width: 28rem;
 }
 
+h2 {
+  margin: 0;
+}
+
 .app {
   margin: 1rem;
   width: calc(100vw - 2rem);

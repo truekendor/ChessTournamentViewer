@@ -228,15 +228,16 @@ function App() {
     useEffect(() => {
         if (!stockfish.current) return
 
-        stockfish.current.onMessage = (liveInfo, arrow) => {
+        stockfish.current.onMessage = (result) => {
             if (game.current.getHeaders()["Event"] === "?") return
+            if (game.current.fen() != result.fen) return
 
-            stockfishArrow.current = arrow
+            stockfishArrow.current = result.arrow
             updateBoard(["a1", "a1"], true)
 
             setLiveInfosStockfish(data => {
                 const newData = [...data]
-                newData[liveInfo.info.ply] = liveInfo
+                newData[result.liveInfo.info.ply] = result.liveInfo
                 return newData
             })
         }
@@ -271,7 +272,13 @@ function App() {
                 <button className="showCrosstable" onClick={() => setPopupOpen(true)}>Show Crosstable</button>
                 <StandingsTable engines={engines} />
                 <GameGraph black={black} white={white} liveInfosBlack={liveInfosBlack} liveInfosWhite={liveInfosWhite} liveInfosStockfish={liveInfosStockfish} />
+            </div>}
 
+            {cccEvent && <div className="scheduleWindow">
+                <h2>Schedule</h2>
+                <ScheduleComponent event={cccEvent} engines={engines} requestEvent={requestEvent} />
+
+                <h2>Event History</h2>
                 <div className="eventListContainer">
                     <table className="eventList">
                         <tbody>
@@ -281,11 +288,6 @@ function App() {
                         </tbody>
                     </table>
                 </div>
-            </div>}
-
-            {cccEvent && <div className="scheduleWindow">
-                <h2>Schedule</h2>
-                <ScheduleComponent event={cccEvent} engines={engines} requestEvent={requestEvent} />
             </div>}
 
         </div>

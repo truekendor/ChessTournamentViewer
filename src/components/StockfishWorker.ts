@@ -2,90 +2,145 @@ import type { DrawShape } from "@lichess-org/chessground/draw"
 import type { CCCLiveInfo } from "../types"
 import type { Square } from "chess.js"
 
-export class StockfishWorker {
+export type AnalysisResult = {
+    fen: string;
+    liveInfo: CCCLiveInfo;
+    arrow: DrawShape | null;
+}
 
-    worker: Worker
-    onMessage: ((liveInfo: CCCLiveInfo, arrow: DrawShape | null) => void) | null = null
-    currentFen: string | null = null
-    receivedBestMove: boolean = true
-    stopping: boolean = false
+export class StockfishWorker {
+    private worker: Worker;
+
+    public onMessage: ((result: AnalysisResult) => void) | null = null;
+
+    private isSearching: boolean = false;
+    private activeFen: string | null = null;
+    private latestRequestedFen: string | null = null;
+
+    private queue: Promise<void> = Promise.resolve();
+
+    private stopSignal: (() => void) | null = null;
 
     constructor() {
-        this.worker = new Worker("/stockfish-17.1-single-a496a04.js")
+        this.worker = new Worker("/stockfish-17.1-single-a496a04.js");
 
-        this.worker.onmessage = (e) => {
-            if (e.data.includes("bestmove"))
-                this.receivedBestMove = true
+        this.worker.onmessage = (e) => this.handleWorkerMessage(e);
 
-            if (this.stopping || !e.data.startsWith("info depth")) return;
-            if (e.data.includes("currmove")) return;
-            if (!this.currentFen || !this.onMessage || this.currentFen === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") return;
-            
-            const data = e.data.split(" ")
-            const color = this.currentFen.includes(" w ") ? "white" : "black"
-            const ply = 2 * Number(this.currentFen.split(" ").at(-1)) - (color === "white" ? 1 : 0) - 1
+        this.post("uci");
+        this.post("setoption name Hash value 128");
+        this.post("isready");
+        this.post("ucinewgame");
+    }
 
-            const time = Number(data[17])
-            if (isNaN(time) || time <= 100) return
+    public analyze(fen: string) {
+        this.latestRequestedFen = fen;
 
-            const liveInfo: CCCLiveInfo = {
-                type: "liveInfo",
-                info: {
-                    ply,
-                    color,
-                    depth: data[2],
-                    hashfull: data[15],
-                    multipv: data[6],
-                    name: "",
-                    nodes: data[11],
-                    pv: "",
-                    score: String(Number(data[9]) / 100 * (color === "black" ? -1 : 1)),
-                    seldepth: data[4],
-                    speed: data[13],
-                    tbhits: "",
-                    time: "",
-                }
+        this.queue = this.queue.then(async () => {
+            if (this.latestRequestedFen !== fen) {
+                return;
             }
+            await this.performAnalysis(fen);
+        }).catch(err => {
+            console.error("Worker Queue Error:", err);
+            this.isSearching = false;
+        });
+    }
 
-            const bestmove = data[19]
-            const arrow: DrawShape | null = bestmove && bestmove.length >= 4 ? { orig: bestmove.slice(0, 2) as Square, dest: bestmove.slice(2, 4) as Square, brush: "stockfish" } : null
-            this.onMessage(liveInfo, arrow)
+    private async performAnalysis(fen: string) {
+        if (this.isSearching) {
+            this.post("stop");
+            await this.waitForStop();
         }
-        this.sendMessage("uci")
-        this.sendMessage("setoption name Hash value 128")
-        this.sendMessage("isready")
-        this.sendMessage("ucinewgame")
+
+        this.activeFen = fen;
+        this.post(`position fen ${fen}`);
+        this.post("go infinite");
+        this.isSearching = true;
     }
 
-    sendMessage(command: string) {
-        this.worker.postMessage(command)
+    private handleWorkerMessage(e: MessageEvent) {
+        const msg = e.data;
+
+        if (msg.startsWith("bestmove")) {
+            this.isSearching = false;
+            if (this.stopSignal) {
+                this.stopSignal();
+                this.stopSignal = null;
+            }
+            return;
+        }
+
+        if (msg.startsWith("info depth") && !msg.includes("currmove") && this.onMessage && this.activeFen) {
+            const parsed = this.parseInfo(msg, this.activeFen);
+            if (parsed) {
+                this.onMessage({
+                    fen: this.activeFen,
+                    liveInfo: parsed.liveInfo,
+                    arrow: parsed.arrow
+                });
+            }
+        }
     }
 
-    async analyze(fen: string) {
-        if (this.currentFen === fen) return
-        this.stopping = true
+    private waitForStop(): Promise<void> {
+        return new Promise((resolve) => {
+            this.stopSignal = resolve;
+        });
+    }
 
-        this.sendMessage("stop")
-        const waitForReady = () => {
-            return new Promise<void>((resolve) => {
-                const check = () => {
-                    if (this.receivedBestMove) resolve()
-                    else setTimeout(check, 10)
-                };
-                check()
-            });
+    private post(command: string) {
+        this.worker.postMessage(command);
+    }
+
+    private parseInfo(raw: string, fen: string) {
+        const data = raw.split(" ");
+        const color = fen.includes(" w ") ? "white" : "black";
+        const fenParts = fen.split(" ");
+        const fullmoves = Number(fenParts[fenParts.length - 1]) || 1;
+        const ply = 2 * fullmoves - (color === "white" ? 1 : 0) - 1;
+
+        const time = Number(data[17]);
+        if (isNaN(time)) return null;
+
+        let scoreVal = 0;
+        const scoreIdx = data.indexOf("score");
+        if (scoreIdx !== -1) {
+            if (data[scoreIdx + 1] === "cp") {
+                scoreVal = Number(data[scoreIdx + 2]) / 100 * (color === "black" ? -1 : 1);
+            } else {
+                scoreVal = Math.min(Math.max(Number(data[scoreIdx + 2]) * 10, -10, 10))
+            }
+        }
+
+        const bestmove = data[19];
+        const arrow: DrawShape | null = bestmove && bestmove.length >= 4
+            ? { orig: bestmove.slice(0, 2) as Square, dest: bestmove.slice(2, 4) as Square, brush: "stockfish" }
+            : null;
+
+        const liveInfo: CCCLiveInfo = {
+            type: "liveInfo",
+            info: {
+                ply,
+                color,
+                depth: data[data.indexOf("depth") + 1],
+                score: String(scoreVal),
+                name: "",
+                hashfull: data[data.indexOf("hashfull") + 1],
+                multipv: data[data.indexOf("multipv") + 1],
+                nodes: data[data.indexOf("nodes") + 1],
+                pv: "",
+                seldepth: data[data.indexOf("seldepth") + 1],
+                speed: data[data.indexOf("nps") + 1],
+                tbhits: "0",
+                time: data[data.indexOf("time") + 1],
+            }
         };
-        await waitForReady()
 
-        this.currentFen = fen
-        this.stopping = false
-        this.receivedBestMove = false
-        this.sendMessage(`position fen ${fen}`)
-        this.sendMessage("go infinite")
+        return { liveInfo, arrow };
     }
 
-    terminate() {
-        this.sendMessage("quit")
-        this.worker.terminate()
+    public terminate() {
+        this.post("quit");
+        this.worker.terminate();
     }
 }
