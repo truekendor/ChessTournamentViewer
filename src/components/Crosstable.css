@@ -1,0 +1,50 @@
+.crosstable {
+  border-collapse: collapse;
+  width: calc(100% - 2rem);
+  height: calc(100% - 2rem);
+}
+
+.crosstable tr:first-child {
+  border-bottom: 1px solid #121212;
+}
+
+.crosstable tr td:first-child {
+  border-right: 1px solid #121212;
+  text-wrap: nowrap;
+}
+
+.crosstable td {
+  padding: 1rem;
+}
+
+.crosstable .h2h {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.crosstable .gamePair {
+  width: 2.25rem;
+  margin-right: 0.125rem;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.crosstable .gamePair.win {
+  background: #43A04733; 
+}
+
+.crosstable .gamePair.loss {
+  background: #E5393533; 
+}
+
+.crosstable .h2h span.win {
+  color: #43A047;
+}
+
+.crosstable .h2h span.loss {
+  color: #E53935;
+}
+
+.crosstable .h2h span.draw {
+  color: #A1A1A1;
+}

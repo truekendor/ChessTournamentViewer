@@ -9,15 +9,34 @@
   width: calc(100vw - 2rem);
   height: calc(100vh - 2rem);
   overflow: hidden;
+  position: relative;
 
   display: grid;
   grid-template-columns: var(--board-size) var(--standings-width) var(--schedule-width);
   gap: 1rem;
 }
 
+.popup {
+  position: absolute;
+  background: #2A2A2AEE;
+  width: calc(100vw - 2rem);
+  height: calc(100vh - 2rem);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  overflow: auto;
+}
+
+.popup button {
+  position: absolute;
+  right: 0;
+}
+
 .boardWindow {
   max-height: 100%;
   width: var(--board-size);
+  border: 1px solid #121212;
 }
 
 .board {
@@ -27,4 +46,8 @@
 
 .board cg-board {
   background-color: #8ca2ad;
+}
+
+.standingsWindow .showCrosstable {
+  width: 100%;
 }

@@ -15,15 +15,15 @@ body {
 button {
     outline: none;
     border: none;
-    background: #424242;
+    background: #343434;
     padding: 0.5rem 0.625rem;
     cursor: pointer;
 }
 
 button:hover {
-    background: #565656;
+    background: #434343;
 }
 
 button.active {
-    background: #505050;
+    background: #4D4D4D;
 }

@@ -2,13 +2,32 @@
   margin-top: 0.75rem;
 }
 
-.standingsEntry {
-  display: grid;
-  grid-template-columns: 2rem 1fr 13rem 3rem;
-  padding-right: 1px;
+.standings {
+  background: #2A2A2A;
+  border: 1px solid #121212;
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.standingsScore {
+.standingsEntry {
+  border-bottom: 1px solid #121212;
+}
+
+.standingsEntry td {
+  padding: 0.5rem;
+}
+
+.standings tr:nth-child(2n) td {
+  background: #323232;
+}
+
+td.standingsScore {
   text-align: right;
-  margin-right: 1rem;
+  padding-right: 1rem;
+}
+
+td.standingsScore,
+td.perf,
+td.rating {
+  color: #A1A1A1;
 }

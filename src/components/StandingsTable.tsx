@@ -6,22 +6,22 @@ type StandingsTableProps = {
 }
 
 export function StandingsTable({engines}: StandingsTableProps) {
-
-    const sortedEngines = engines.sort((a, b) => Number(b.points) - Number(a.points)) ?? []
-
     return (
-        <div className="standings">
-            {sortedEngines.map((engine, index) => {
-                const playedGames = Math.round(100 * Number(engine.points) / Number(engine.perf))
-                return (
-                    <div key={engine.id} className="standingsEntry">
-                        <div>#{index + 1}</div>
-                        <div>{engine.name}</div>
-                        <div className="standingsScore">{engine.points} / {playedGames}.00 ({engine.perf}%)</div>
-                        <div>{engine.rating}</div>
-                    </div>
-                )
-            })}
-        </div>
+        <table className="standings">
+            <tbody>
+                {engines.map((engine, index) => {
+                    const playedGames = Math.round(100 * Number(engine.points) / Number(engine.perf))
+                    return (
+                        <tr key={engine.id} className="standingsEntry">
+                            <td>#{index + 1}</td>
+                            <td>{engine.name}</td>
+                            <td className="standingsScore">{engine.points} / {playedGames}.00</td>
+                            <td className="perf">{engine.perf}%</td>
+                            <td className="rating">{engine.rating}</td>
+                        </tr>
+                    )
+                })}
+            </tbody>
+        </table>
     )
 }

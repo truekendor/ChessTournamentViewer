@@ -3,7 +3,7 @@ import { Chess, Move, type Square } from 'chess.js'
 import { useEffect, useRef, useState } from 'react'
 import { CCCWebSocket } from './websocket'
 import type { Api } from '@lichess-org/chessground/api'
-import type { CCCMessage, CCCEventUpdate, CCCEventsListUpdate, CCCClocks } from './types'
+import type { CCCMessage, CCCEventUpdate, CCCEventsListUpdate, CCCClocks, CCCGame } from './types'
 import type { DrawShape } from '@lichess-org/chessground/draw'
 import { CategoryScale, Chart, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
 import { EngineComponent } from './components/EngineComponent'
@@ -14,6 +14,7 @@ import { ScheduleComponent } from './components/ScheduleComponent'
 import { StockfishWorker } from './components/StockfishWorker'
 import './App.css'
 import { emptyLiveInfo, extractLiveInfoFromGame, type LiveInfoEntry } from './components/LiveInfo'
+import { Crosstable } from './components/Crosstable'
 
 const CLOCK_UPDATE_MS = 25
 
@@ -32,6 +33,7 @@ function App() {
     const stockfish = useRef<StockfishWorker>(null)
     const [fen, setFen] = useState(game.current.fen())
 
+    const [popupOpen, setPopupOpen] = useState(false)
     const [_, setCccEventList] = useState<CCCEventsListUpdate>()
     const [cccEvent, setCccEvent] = useState<CCCEventUpdate>()
     const [clocks, setClocks] = useState<CCCClocks>({ binc: "0", winc: "0", btime: "0", wtime: "0", type: "clocks" })
@@ -126,7 +128,7 @@ function App() {
                 lastMove = game.current.history({ verbose: true }).at(-1)!!
                 updateBoard([lastMove.from, lastMove.to])
 
-                const {liveInfosBlack, liveInfosWhite} = extractLiveInfoFromGame(game.current)
+                const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(game.current)
                 setLiveInfosWhite(liveInfosWhite)
                 setLiveInfosBlack(liveInfosBlack)
                 setLiveInfosStockfish([])
@@ -244,12 +246,17 @@ function App() {
     const latestLiveInfoBlack = liveInfosBlack.at(-1) ?? emptyLiveInfo()
     const latestLiveInfoWhite = liveInfosWhite.at(-1) ?? emptyLiveInfo()
 
-    const engines = cccEvent?.tournamentDetails.engines ?? []
+    const engines = (cccEvent?.tournamentDetails.engines ?? []).sort((a, b) => Number(b.points) - Number(a.points)) ?? []
     const white = engines.find(engine => engine.name === game.current.getHeaders()["White"])
     const black = engines.find(engine => engine.name === game.current.getHeaders()["Black"])
 
     return (
         <div className="app">
+
+            {popupOpen && <div className="popup">
+                <button onClick={() => setPopupOpen(false)}>Close</button>
+                {cccEvent && <Crosstable engines={engines} cccEvent={cccEvent} />}
+            </div>}
 
             <div className="boardWindow">
                 {black && clocks && <EngineComponent info={latestLiveInfoBlack} engine={black} time={Number(clocks.btime)} />}
@@ -261,6 +268,7 @@ function App() {
 
             {white && black && <div className="standingsWindow">
                 <h2>Standings</h2>
+                <button className="showCrosstable" onClick={() => setPopupOpen(true)}>Show Crosstable</button>
                 <StandingsTable engines={engines} />
                 <GameGraph black={black} white={white} liveInfosBlack={liveInfosBlack} liveInfosWhite={liveInfosWhite} liveInfosStockfish={liveInfosStockfish} />
             </div>}

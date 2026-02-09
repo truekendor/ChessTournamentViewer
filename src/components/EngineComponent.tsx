@@ -20,22 +20,26 @@ function formatLargeNumber(value: string) {
     return String(value)
 }
 
-export function EngineComponent({ engine, info, time }: EngineComponentProps) {
+function formatTime(time: number) {
+    if (time < 0)
+        time = 0;
 
     const hundreds = String(Math.floor(time / 10) % 100).padStart(2, "0");
     const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
     const minutes = String(Math.floor(time / (1000 * 60)) % 60).padStart(2, "0");
-    const timeString = `${minutes}:${seconds}.${hundreds}`
+    return `${minutes}:${seconds}.${hundreds}`
+}
 
+export function EngineComponent({ engine, info, time }: EngineComponentProps) {
     return (
         <div className="engine">
-            <EngineLogo engine={engine}/>
+            <EngineLogo engine={engine} />
             <span className="engineName">{engine.name}</span>
             <span className="engineEval">{info.info.score}</span>
-            <span className="engineField"> D: <span>{info.info.depth} / {info.info.seldepth}</span></span>
-            <span className="engineField"> N: <span>{formatLargeNumber(info.info.nodes)}</span></span>
-            <span className="engineField"> NPS: <span>{formatLargeNumber(info.info.speed)}</span></span>
-            <span className="engineField"> T: <span>{timeString}</span></span>
+            <span className="engineField">Depth <span>{info.info.depth} / {info.info.seldepth}</span></span>
+            <span className="engineField">Nodes: {formatLargeNumber(info.info.nodes)}</span>
+            <span className="engineField">NPS: {formatLargeNumber(info.info.speed)}</span>
+            <span className="engineField">Time: {formatTime(time)}</span>
         </div>
     )
 }

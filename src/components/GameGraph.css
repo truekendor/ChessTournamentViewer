@@ -1,10 +1,13 @@
 .gameGraph {
     margin-top: 1rem;
+    background: #2A2A2A;
+    border: 1px solid #121212;
 }
 
 .modeSelectorList {
     width: 100%;
     display: flex;
+    border-bottom: 1px solid #121212;
 }
 
 .modeSelector {
