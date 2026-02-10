@@ -20,9 +20,16 @@ export function Schedule({ engines, event, selectedGame, requestEvent }: Schedul
     useEffect(() => {
         if (!scheduleRef.current || !currentGameRef.current || scrolledToCurrentGame) return
 
-        currentGameRef.current.scrollIntoView({ block: "center" })
+        const parentRect = scheduleRef.current.getBoundingClientRect();
+        const childRect = currentGameRef.current.getBoundingClientRect();
+        const relativeChildTop = childRect.top - parentRect.top;
+
+        scheduleRef.current.scrollTo({
+            top: scheduleRef.current.scrollTop + relativeChildTop - (scheduleRef.current.clientHeight / 2) + (currentGameRef.current.clientHeight / 2),
+            behavior: "instant",
+        });
         setScrolledToCurrentGame(true)
-        
+
     }, [scheduleRef.current, currentGameRef.current])
 
     useEffect(() => {
