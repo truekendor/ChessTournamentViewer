@@ -34,22 +34,22 @@
 }
 
 .crosstable .gamePair.win {
-  background: #43A04733; 
+  background: #43a04733;
 }
 
 .crosstable .gamePair.loss {
-  background: #E5393533; 
+  background: #e5393533;
 }
 
 .crosstable .h2h span.win {
-  color: #43A047;
+  color: #43a047;
 }
 
 .crosstable .h2h span.loss {
-  color: #E53935;
+  color: #e53935;
 }
 
 .crosstable .h2h span.draw,
 .crosstable .h2h span.tbd {
-  color: #A1A1A1;
+  color: #a1a1a1;
 }

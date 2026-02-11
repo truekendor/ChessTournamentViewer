@@ -1,9 +1,9 @@
 .eventListContainer {
-    margin-left: auto;
-    border: 1px solid #232323;
-    background: #323232;
-    padding: 0.5rem;
-    border-radius: 4px;
-    outline: none;
-    max-width: 50%;
+  margin-left: auto;
+  border: 1px solid #232323;
+  background: #323232;
+  padding: 0.5rem;
+  border-radius: 4px;
+  outline: none;
+  max-width: 50%;
 }

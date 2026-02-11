@@ -1,10 +1,16 @@
 @keyframes sk-pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
-.sk-block{
+.sk-block {
   vertical-align: middle;
   background-color: #2a2a2a;
   border-radius: 6px;
@@ -12,7 +18,9 @@
 }
 
 @keyframes sk-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sk-spinner {
@@ -20,7 +28,7 @@
   border-style: solid;
 
   border-color: #2a2a2a;
-  border-top-color: #3a3a3a; 
+  border-top-color: #3a3a3a;
 
   animation:
     sk-spin 0.9s linear infinite,

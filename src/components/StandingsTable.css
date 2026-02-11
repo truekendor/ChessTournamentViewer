@@ -6,7 +6,7 @@
 }
 
 .standings {
-  background: #2A2A2A;
+  background: #2a2a2a;
   border: 1px solid #232323;
   width: 100%;
   border-collapse: collapse;
@@ -34,7 +34,7 @@
 td.placement {
   width: var(--placement-width);
   text-align: center;
-  color: #A1A1A1;
+  color: #a1a1a1;
 }
 
 td.logo {
@@ -51,7 +51,7 @@ td.name {
 td.score,
 td.perf,
 td.rating {
-  color: #A1A1A1;
+  color: #a1a1a1;
 }
 
 td.score {

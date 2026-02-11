@@ -3,7 +3,7 @@
   flex-direction: column;
   border-radius: 8px;
   background: #343434;
-  border: 1px solid #1A1A1A;
+  border: 1px solid #1a1a1a;
   max-width: 100%;
   overflow: hidden;
 }
@@ -50,13 +50,13 @@
 }
 
 .engineField .key {
-  color: #A1A1A1;
+  color: #a1a1a1;
 }
 
 .engineField .value,
 .enginePv,
 .engineEval {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .enginePv {
-  color: #A1A1A1;
+  color: #a1a1a1;
   font-size: 0.9rem;
   text-overflow: ellipsis;
   white-space: nowrap;

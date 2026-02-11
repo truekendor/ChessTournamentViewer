@@ -50,7 +50,7 @@ Chart.register(
   LineElement,
   Title,
   Tooltip,
-  Legend,
+  Legend
 );
 
 function App() {
@@ -80,12 +80,12 @@ function App() {
   const [liveInfosWhite, setLiveInfosWhite] = useState<LiveInfoEntry[]>([]);
   const [liveInfosBlack, setLiveInfosBlack] = useState<LiveInfoEntry[]>([]);
   const [liveInfosStockfish, setLiveInfosStockfish] = useState<LiveInfoEntry[]>(
-    [],
+    []
   );
 
   function updateBoard(
     lastMove: [Square, Square],
-    arrowsOnly: boolean = false,
+    arrowsOnly: boolean = false
   ) {
     const arrows: DrawShape[] = [];
     if (whiteArrow.current) arrows.push(whiteArrow.current[0]);
@@ -96,18 +96,8 @@ function App() {
       drawable: {
         // @ts-ignore
         brushes: {
-          white: {
-            key: "white",
-            color: "#fff",
-            opacity: 0.7,
-            lineWidth: 10,
-          },
-          black: {
-            key: "black",
-            color: "#000",
-            opacity: 0.7,
-            lineWidth: 10,
-          },
+          white: { key: "white", color: "#fff", opacity: 0.7, lineWidth: 10 },
+          black: { key: "black", color: "#000", opacity: 0.7, lineWidth: 10 },
           stockfish: {
             key: "stockfish",
             color: "#0D47A1",
@@ -141,11 +131,7 @@ function App() {
       if (game.current.turn() == "w") wtime -= CLOCK_UPDATE_MS;
       else btime -= CLOCK_UPDATE_MS;
 
-      return {
-        ...currentClock,
-        wtime: String(wtime),
-        btime: String(btime),
-      };
+      return { ...currentClock, wtime: String(wtime), btime: String(btime) };
     });
   }
 
@@ -169,7 +155,7 @@ function App() {
         updateBoard([lastMove.from, lastMove.to]);
 
         const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(
-          game.current,
+          game.current
         );
         setLiveInfosWhite(liveInfosWhite);
         setLiveInfosBlack(liveInfosBlack);
@@ -301,7 +287,7 @@ function App() {
       if (cccEvent && cccGame)
         localStorage.setItem(
           cccGame.gameDetails.gameNr + "|" + result.liveInfo.info.ply,
-          JSON.stringify(result.liveInfo),
+          JSON.stringify(result.liveInfo)
         );
 
       setLiveInfosStockfish((data) => {
@@ -319,13 +305,13 @@ function App() {
 
   const engines =
     (cccEvent?.tournamentDetails.engines ?? []).sort(
-      (a, b) => Number(b.points) - Number(a.points),
+      (a, b) => Number(b.points) - Number(a.points)
     ) ?? [];
   const white = engines.find(
-    (engine) => engine.name === game.current.getHeaders()["White"],
+    (engine) => engine.name === game.current.getHeaders()["White"]
   );
   const black = engines.find(
-    (engine) => engine.name === game.current.getHeaders()["Black"],
+    (engine) => engine.name === game.current.getHeaders()["Black"]
   );
 
   return (
@@ -367,7 +353,7 @@ function App() {
         <EngineCard
           engine={StockfishEngineDefinition}
           info={latestLiveInfoStockfish}
-          time={0}
+          time={Number(latestLiveInfoStockfish.info.time)}
           placeholder={"Stockfish"}
         />
 

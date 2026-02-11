@@ -52,12 +52,7 @@ export function Spinner({
   return (
     <div
       className={"sk-spinner" + (className ? " " + className : "")}
-      style={{
-        width: size,
-        height: size,
-        borderWidth: thickness,
-        ...style,
-      }}
+      style={{ width: size, height: size, borderWidth: thickness, ...style }}
     />
   );
 }
