@@ -194,10 +194,6 @@ function App() {
         break;
 
       case "gameUpdate":
-        game.current.loadPgn(msg.gameDetails.pgn);
-        setFen(game.current.fen());
-        updateBoard();
-
         const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(
           game.current
         );
@@ -216,7 +212,14 @@ function App() {
         }
         liveInfosRef.current.stockfish = liveInfosStockfish;
 
+        currentMoveNumber.current = -1;
+        game.current.loadPgn(msg.gameDetails.pgn);
+        updateBoard();
+
         setCccGame(msg);
+        setFen(game.current.fen());
+
+        console.log("new game :)");
 
         break;
 
