@@ -1,11 +1,15 @@
+import argparse
 import asyncio
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
 from subprocess import Popen, PIPE
-import os
 
-ENGINE_PATH = "/home/patrick/ChessProgramming/PlentyChess/engine"
-
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "path",
+    help="Path to a UCI engine",
+)
+args = parser.parse_args()
 
 class EngineManager:
     def __init__(self):
@@ -21,9 +25,9 @@ class EngineManager:
 
         self.active_task = asyncio.current_task()
 
-        print(f"Starting engine: {ENGINE_PATH}")
+        print(f"Starting engine: {args.path}")
         self.active_engine = Popen(
-            [ENGINE_PATH],
+            [args.path],
             stdout=PIPE, stdin=PIPE, stderr=PIPE,
             text=True, bufsize=1
         )
