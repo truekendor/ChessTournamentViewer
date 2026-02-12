@@ -28,7 +28,6 @@ import type { Config } from "@lichess-org/chessground/config";
 import { Schedule } from "./components/Schedule";
 import "./App.css";
 import {
-  emptyLiveInfo,
   extractLiveInfoFromGame,
   type LiveInfoEntry,
 } from "./components/LiveInfo";
@@ -82,6 +81,34 @@ function App() {
 
   const lastBoardUpdateRef = useRef(new Date().getTime());
 
+  function getCurrentLiveInfos(offset: number = -1) {
+    if (liveInfosRef.current.black.at(currentMoveNumber.current)) {
+      return {
+        liveInfoBlack: liveInfosRef.current.black.at(currentMoveNumber.current),
+        liveInfoWhite: liveInfosRef.current.white.at(
+          currentMoveNumber.current === -1
+            ? -1
+            : Math.max(0, currentMoveNumber.current + offset)
+        ),
+        liveInfoKibitzer: liveInfosRef.current.kibitzer.at(
+          currentMoveNumber.current
+        ),
+      };
+    } else {
+      return {
+        liveInfoBlack: liveInfosRef.current.black.at(
+          currentMoveNumber.current === -1
+            ? -1
+            : Math.max(0, currentMoveNumber.current + offset)
+        ),
+        liveInfoWhite: liveInfosRef.current.white.at(currentMoveNumber.current),
+        liveInfoKibitzer: liveInfosRef.current.kibitzer.at(
+          currentMoveNumber.current
+        ),
+      };
+    }
+  }
+
   function updateBoard() {
     const currentTime = new Date().getTime();
     if (currentTime - lastBoardUpdateRef.current <= 50) return;
@@ -100,38 +127,31 @@ function App() {
 
     const arrows: DrawShape[] = [];
 
-    const latestLiveInfoBlack = liveInfosRef.current.black.at(
-      currentMoveNumber.current
-    );
-    const latestLiveInfoWhite = liveInfosRef.current.white.at(
-      currentMoveNumber.current
-    );
-    const latestLiveInfoKibitzer = liveInfosRef.current.kibitzer.at(
-      currentMoveNumber.current
-    );
+    const { liveInfoBlack, liveInfoKibitzer, liveInfoWhite } =
+      getCurrentLiveInfos(game.current.getHeaders()["Termination"] ? 1 : -1);
 
-    if (latestLiveInfoBlack) {
-      const pv = latestLiveInfoBlack.info.pv.split(" ");
+    if (liveInfoBlack) {
+      const pv = liveInfoBlack.info.pv.split(" ");
       const nextMove = turn == "b" ? pv[0] : pv[1];
       if (nextMove && nextMove.length >= 4)
         arrows.push({
           orig: (nextMove.slice(0, 2) as Square) || "a1",
           dest: (nextMove.slice(2, 4) as Square) || "a1",
-          brush: latestLiveInfoBlack.info.color,
+          brush: liveInfoBlack.info.color,
         });
     }
-    if (latestLiveInfoWhite) {
-      const pv = latestLiveInfoWhite.info.pv.split(" ");
+    if (liveInfoWhite) {
+      const pv = liveInfoWhite.info.pv.split(" ");
       const nextMove = turn == "w" ? pv[0] : pv[1];
       if (nextMove && nextMove.length >= 4)
         arrows.push({
           orig: (nextMove.slice(0, 2) as Square) || "a1",
           dest: (nextMove.slice(2, 4) as Square) || "a1",
-          brush: latestLiveInfoWhite.info.color,
+          brush: liveInfoWhite.info.color,
         });
     }
-    if (latestLiveInfoKibitzer) {
-      const pv = latestLiveInfoKibitzer.info.pv.split(" ");
+    if (liveInfoKibitzer) {
+      const pv = liveInfoKibitzer.info.pv.split(" ");
       const nextMove = pv[0];
       if (nextMove && nextMove.length >= 4)
         arrows.push({
@@ -174,7 +194,7 @@ function App() {
   function updateClocks() {
     setClocks((currentClock) => {
       if (!currentClock) return currentClock;
-      if (game.current.getHeaders()["Termination"]) return currentClock;
+      if (game.current.getHeaders()["Termination"]) return { ...currentClock };
 
       let wtime = Number(currentClock.wtime);
       let btime = Number(currentClock.btime);
@@ -193,6 +213,8 @@ function App() {
         break;
 
       case "gameUpdate":
+        game.current.loadPgn(msg.gameDetails.pgn);
+
         const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(
           game.current
         );
@@ -212,7 +234,6 @@ function App() {
         liveInfosRef.current.kibitzer = liveInfosKibitzer;
 
         currentMoveNumber.current = -1;
-        game.current.loadPgn(msg.gameDetails.pgn);
         updateBoard();
 
         setCccGame(msg);
@@ -326,26 +347,20 @@ function App() {
         };
       }
     );
-  }, [activeKibitzer?.getID()]);
+  }, [
+    activeKibitzer?.getID(),
+    cccEvent?.tournamentDetails.tNr,
+    cccGame?.gameDetails.gameNr,
+  ]);
 
   useEffect(() => {
+    if (!cccGame?.gameDetails.live) return;
+
     activeKibitzer?.analyze(fen);
-  }, [fen, activeKibitzer?.getID()]);
+  }, [fen, activeKibitzer?.getID(), cccGame?.gameDetails.gameNr]);
 
-  const latestLiveInfoBlack =
-    liveInfosRef.current.black.at(-1) ?? emptyLiveInfo();
-  const latestLiveInfoWhite =
-    liveInfosRef.current.white.at(-1) ?? emptyLiveInfo();
-
-  // Allow the kibitzer to be at most 1 ply behind
-  const currentPly = Math.max(
-    latestLiveInfoBlack.info.ply,
-    latestLiveInfoWhite.info.ply
-  );
-  const kibitzerInfoIdx =
-    liveInfosRef.current.kibitzer.length < currentPly - 1 ? currentPly : -1;
-  const latestLiveInfoKibitzer =
-    liveInfosRef.current.kibitzer.at(kibitzerInfoIdx) ?? emptyLiveInfo();
+  const { liveInfoBlack, liveInfoKibitzer, liveInfoWhite } =
+    getCurrentLiveInfos();
 
   const engines = useMemo(() => {
     if (!cccEvent?.tournamentDetails?.engines) return [];
@@ -391,21 +406,21 @@ function App() {
       <div className="engineWindow">
         <EngineCard
           engine={black}
-          info={latestLiveInfoBlack}
+          info={liveInfoBlack}
           time={Number(clocks?.btime ?? 0)}
           placeholder={"Black"}
         />
 
         <EngineCard
           engine={activeKibitzer?.getEngineInfo()}
-          info={latestLiveInfoKibitzer}
-          time={Number(latestLiveInfoKibitzer.info.time)}
+          info={liveInfoKibitzer}
+          time={Number(liveInfoKibitzer?.info.time)}
           placeholder={"Kibitzer"}
         />
 
         <EngineCard
           engine={white}
-          info={latestLiveInfoWhite}
+          info={liveInfoWhite}
           time={Number(clocks?.wtime ?? 0)}
           placeholder={"White"}
         />
@@ -451,6 +466,8 @@ function App() {
             liveInfosBlack={liveInfosRef.current.black}
             liveInfosWhite={liveInfosRef.current.white}
             liveInfosKibitzer={liveInfosRef.current.kibitzer}
+            setCurrentMoveNumber={setCurrentMoveNumber}
+            currentMoveNumber={currentMoveNumber.current}
           />
         ) : (
           <>

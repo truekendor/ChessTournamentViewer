@@ -20,14 +20,14 @@ export function extractLiveInfoFromGame(game: Chess) {
     const liveInfo: CCCLiveInfo = {
       type: "liveInfo",
       info: {
-        color: i % 2 === 0 ? "w" : "b",
+        color: i % 2 === 0 ? "white" : "black",
         depth: data[0].split("/")[1].split(" ")[0],
         multipv: "1",
         hashfull: data[6].split("=")[1],
         name: "",
         nodes: data[3].split("=")[1],
         ply: i + 1,
-        pv: "",
+        pv: data[8].replace("pv=", "").replaceAll('"', ""),
         score,
         seldepth: data[4].split("=")[1],
         speed: data[5].split("=")[1],

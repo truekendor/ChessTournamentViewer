@@ -10,6 +10,8 @@ type GameGraphProps = {
   liveInfosKibitzer: LiveInfoEntry[];
   white: CCCEngine;
   black: CCCEngine;
+  setCurrentMoveNumber: (moveNumber: number) => void;
+  currentMoveNumber: number;
 };
 
 const MODES = [
@@ -66,6 +68,8 @@ export function GameGraph({
   white,
   black,
   liveInfosKibitzer,
+  setCurrentMoveNumber,
+  currentMoveNumber,
 }: GameGraphProps) {
   const [mode, setMode] = useState(0);
 
@@ -130,14 +134,17 @@ export function GameGraph({
             responsive: true,
             maintainAspectRatio: false,
             transitions: { active: { animation: { duration: 0 } } },
-            hover: { mode: undefined },
             elements: {
               line: { tension: 0 },
               // point: { radius: 0 },
             },
             plugins: {
               legend: { display: false, onClick: undefined },
-              tooltip: { enabled: false },
+              // @ts-ignore
+              verticalLine: { index: currentMoveNumber - bookPlies },
+            },
+            onClick: (_, elements) => {
+              setCurrentMoveNumber(elements[0].index + bookPlies);
             },
             scales: {
               y: {
@@ -154,6 +161,34 @@ export function GameGraph({
               },
             },
           }}
+          plugins={[
+            {
+              id: "verticalLine",
+              afterDraw: (chart, _, options) => {
+                const {
+                  ctx,
+                  chartArea: { top, bottom, left, right },
+                  scales: { x },
+                } = chart;
+
+                const xPos = x.getPixelForValue(options.index);
+
+                if (xPos >= left && xPos <= right) {
+                  ctx.save();
+                  ctx.beginPath();
+
+                  ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+                  ctx.lineWidth = 1;
+
+                  ctx.moveTo(xPos, top);
+                  ctx.lineTo(xPos, bottom);
+                  ctx.stroke();
+
+                  ctx.restore();
+                }
+              },
+            },
+          ]}
           data={data}
         />
       </div>

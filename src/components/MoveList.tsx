@@ -29,7 +29,7 @@ const MoveList = memo(
 
     function undoMove() {
       if (currentMoveNumber === -1)
-        setCurrentMoveNumber(game.history().length - 2);
+        setCurrentMoveNumber(game.history().length - 1);
       else setCurrentMoveNumber(currentMoveNumber - 1);
     }
 
@@ -38,6 +38,27 @@ const MoveList = memo(
         setCurrentMoveNumber(currentMoveNumber + 1);
       else setCurrentMoveNumber(-1);
     }
+
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        ) {
+          return;
+        }
+
+        if (event.key === "ArrowLeft" && currentMoveNumber !== 0) {
+          undoMove();
+        } else if (event.key === "ArrowRight" && currentMoveNumber !== -1) {
+          redoMove();
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [currentMoveNumber, moves.length]);
 
     return (
       <>
