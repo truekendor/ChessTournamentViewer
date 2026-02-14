@@ -1,5 +1,4 @@
 import { Chessground } from "@lichess-org/chessground";
-import { Chess, type Square } from "chess.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CCCWebSocket, type TournamentWebSocket } from "./CCCWebsocket";
 import type { Api } from "@lichess-org/chessground/api";
@@ -39,6 +38,8 @@ import { EngineWorker } from "./engine/EngineWorker";
 import { StockfishWorker } from "./engine/StockfishWorker";
 import { EngineWindow } from "./components/EngineWindow";
 import { EngineMinimal } from "./components/EngineMinimal";
+import { Chess960, type Square } from "./chess.js/chess";
+import { Chess } from "./chess.js/chess";
 
 const CLOCK_UPDATE_MS = 25;
 
@@ -55,7 +56,7 @@ Chart.register(
 function App() {
   const boardElementRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Api>(null);
-  const game = useRef(new Chess());
+  const game = useRef(new Chess960());
   const ws = useRef<TournamentWebSocket>(new CCCWebSocket());
 
   const kibitzer = useRef<EngineWorker[]>(null);
@@ -119,9 +120,10 @@ function App() {
     let fen = game.current.fen();
     let turn = game.current.turn();
     if (currentMoveNumber.current !== -1) {
-      const gameCopy = new Chess();
-      for (let i = 0; i < currentMoveNumber.current; i++)
-        gameCopy.move(history[i]);
+      const gameCopy = new Chess960(game.current.getHeaders()["FEN"] ?? new Chess().fen());
+      for (let i = 0; i < currentMoveNumber.current; i++) {
+        gameCopy.move(history[i].san, { strict: false });
+      }
       fen = gameCopy.fen();
       turn = gameCopy.turn();
     }
