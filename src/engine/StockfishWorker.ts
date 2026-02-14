@@ -5,7 +5,7 @@ export class StockfishWorker implements IEngineWorker {
   private callback: null | ((e: any) => void) = null;
 
   constructor() {
-    this.worker = new Worker("/stockfish-17.1-single-a496a04.js");
+    this.worker = new Worker("/stockfish-18.js");
 
     this.worker.onmessage = this.callback;
 
@@ -22,7 +22,10 @@ export class StockfishWorker implements IEngineWorker {
   public onError(_: () => void) {}
 
   public onMessage(callback: (e: any) => void) {
-    this.callback = (e) => callback(e.data);
+    this.callback = (e) => {
+      const data = e.data.replace(" Multithreaded", "");
+      callback(data);
+    }
     this.worker.onmessage = this.callback;
   }
 
