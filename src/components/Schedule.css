@@ -52,6 +52,12 @@
   color: #a1a1a1;
 }
 
+.scheduleWindow .closeButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
 @media (max-width: 775px) {
   .schedule .game {
     grid-template-columns: 35px 40px 1fr 2rem 1fr 40px;
