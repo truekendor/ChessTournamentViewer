@@ -440,8 +440,8 @@ function App() {
             }
           }
         }, 0);
-        const perf = ((points / playedGames.length) * 100).toFixed(2);
-        return { ...engine, perf: String(perf), points: String(points) };
+        const perf = 100 * points / playedGames.length;
+        return { ...engine, perf: perf.toFixed(1), points: points.toFixed(1) };
       })
       .sort((a, b) => Number(b.points) - Number(a.points));
   }, [cccEvent]);

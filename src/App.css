@@ -70,17 +70,13 @@
   grid-column: 1 / 4;
   display: flex;
   align-items: center;
-  padding: 0 1rem;
+  padding: 0 0.5rem;
   gap: 1rem;
   font-weight: bold;
 }
 
-.topBar .settingsRow {
-  margin-left: auto;
-  display: flex;
-  overflow: hidden;
-  gap: 1rem;
-  justify-content: flex-end;
+.topBar .currentEvent {
+  padding-left: 0.5rem;
 }
 
 .app:has(.popup),
@@ -223,12 +219,16 @@ body:has(.popup) {
 
   .standingsWindow {
     grid-column: 2 / 3;
-    grid-row: 4 / 5;
+    grid-row: 3 / 4;
   }
 
   .graphWindow {
     grid-column: 1 / 2;
     grid-row: 3 / 4;
+  }
+
+  .scheduleWindow {
+    grid-column: 2 / 3;
   }
 
   .movesWindow {
@@ -298,6 +298,8 @@ body:has(.popup) {
     grid-column: 1 / 2;
     flex-direction: column;
     align-items: flex-start;
+    display: grid;
+    grid-template-rows: auto auto;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
   }

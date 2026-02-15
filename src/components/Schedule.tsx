@@ -17,7 +17,7 @@ const Schedule = memo(
 
     const [scrolledToCurrentGame, setScrolledToCurrentGame] = useState(false);
 
-    useEffect(() => {
+    function scrollToCurrentGame() {
       if (
         !scheduleRef.current ||
         !currentGameRef.current ||
@@ -37,12 +37,28 @@ const Schedule = memo(
           currentGameRef.current.clientHeight / 2,
         behavior: "instant",
       });
+    }
+
+    useEffect(() => {
+      if (
+        !scheduleRef.current ||
+        !currentGameRef.current ||
+        scrolledToCurrentGame
+      )
+        return;
+
+      scrollToCurrentGame();
+
       setScrolledToCurrentGame(true);
     }, [scheduleRef.current, currentGameRef.current]);
 
     useEffect(() => {
+      scrollToCurrentGame();
       setScrolledToCurrentGame(false);
-    }, [event.tournamentDetails.tNr]);
+    }, [
+      event.tournamentDetails.tNr,
+      event.tournamentDetails.schedule.present?.gameNr,
+    ]);
 
     const gamesList = [
       ...event.tournamentDetails.schedule.past,
@@ -100,7 +116,7 @@ const Schedule = memo(
               onClick={() => requestEvent(game.gameNr)}
             >
               <span className="round">#{i + 1}</span>
-              <EngineLogo engine={gameWhite} size={28}/>
+              <EngineLogo engine={gameWhite} size={28} />
               <span className={"engineName " + whiteClass}>
                 {gameWhite.name}
               </span>
