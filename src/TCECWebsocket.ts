@@ -39,7 +39,10 @@ export class TCECSocket implements TournamentWebSocket {
             this.openGame(pgn);
           });
       } else if (!gameNr && !eventNr) {
-        if (this.onMessage) this.connect(this.onMessage);
+        if (this.onMessage) {
+          this.disconnect();
+          this.connect(this.onMessage);
+        }
       } else if (eventNr) {
         this.openEvent(
           `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_Schedule.sjson`,
@@ -94,20 +97,20 @@ export class TCECSocket implements TournamentWebSocket {
       if (liveInfo) onMessage(liveInfo.liveInfo);
     });
 
-    this.socket.on("livechart", (json: any) => {
-      console.log("livechart", json);
+    this.socket.on("livechart", (_: any) => {
+      // console.log("livechart", json);
     });
 
-    this.socket.on("livechart1", (json: any) => {
-      console.log("livechart1", json);
+    this.socket.on("livechart1", (_: any) => {
+      // console.log("livechart1", json);
     });
 
-    this.socket.on("liveeval", (json: any) => {
-      console.log("liveeval", json);
+    this.socket.on("liveeval", (_: any) => {
+      // console.log("liveeval", json);
     });
 
-    this.socket.on("liveeval1", (json: any) => {
-      console.log("liveeval1", json);
+    this.socket.on("liveeval1", (_: any) => {
+      // console.log("liveeval1", json);
     });
 
     this.socket.on("pgn", (json: any) => {
@@ -115,29 +118,54 @@ export class TCECSocket implements TournamentWebSocket {
       if (!this.live) return;
 
       if (this.game.getHeaders()["Result"] !== "*") {
+        this.disconnect();
         this.connect(onMessage);
         return;
       }
 
-      const fenBeforeMove = this.game.fen();
+      const ignoreIndex = (json.Moves as any[]).findIndex(
+        (moveData) => moveData.fen === this.game.fen()
+      );
+
+      if (ignoreIndex === -1)
+        console.log("CURRENT FEN NOT FOUND", this.game.fen());
+      else {
+        for (const moveData of json.Moves.slice(ignoreIndex + 1)) {
+          const fenBeforeMove = this.game.fen();
+
+          // Make the move
+          const move = this.game
+            .moves({ verbose: true })
+            .find((move) => move.san === moveData.m)!;
+          if (!move) console.log(moveData, this.game.moves({ verbose: true }));
+
+          this.game.move(move.san, { strict: false });
+          onMessage({ type: "newMove", move: move.lan, times: { w: 1, b: 1 } });
+
+          // Extract the live info
+          const relevantKeys = Object.keys(moveData).filter(
+            (key) =>
+              (typeof moveData[key] === "string" &&
+                !moveData[key].includes(" ")) ||
+              key === "pv"
+          );
+          moveData.pv = moveData.pv.San;
+          const commentString = relevantKeys
+            .map((key) => `${key}=${moveData[key]}`)
+            .join(", ");
+          const liveInfo = extractLiveInfoFromTCECComment(
+            commentString,
+            fenBeforeMove,
+            plyFromFen(fenBeforeMove)
+          );
+          if (liveInfo) onMessage(liveInfo);
+        }
+      }
+
       const whiteToMove = this.game.turn() === "w";
-      const moveData = json.Moves.at(-1);
-      const move = this.game
-        .moves({ verbose: true })
-        .find((move) => move.san === moveData.m)!;
-
-      this.game.move(move.san, { strict: false });
-
       const time0 = json.Moves.at(-2)?.tl ?? 0;
       const time1 = json.Moves.at(-1)?.tl ?? 0;
-      onMessage({
-        type: "newMove",
-        move: move.lan,
-        times: {
-          w: whiteToMove ? time1 : time0,
-          b: whiteToMove ? time0 : time1,
-        },
-      });
+
       onMessage({
         type: "clocks",
         binc: "1",
@@ -145,21 +173,6 @@ export class TCECSocket implements TournamentWebSocket {
         btime: whiteToMove ? time0 : time1,
         wtime: whiteToMove ? time1 : time0,
       });
-      const relevantKeys = Object.keys(moveData).filter(
-        (key) =>
-          (typeof moveData[key] === "string" && !moveData[key].includes(" ")) ||
-          key === "pv"
-      );
-      moveData.pv = moveData.pv.San;
-      const commentString = relevantKeys
-        .map((key) => `${key}=${moveData[key]}`)
-        .join(", ");
-      const liveInfo = extractLiveInfoFromTCECComment(
-        commentString,
-        fenBeforeMove,
-        plyFromFen(fenBeforeMove)
-      );
-      if (liveInfo) onMessage(liveInfo);
 
       if (json.Headers.Result !== "*") {
         onMessage({
