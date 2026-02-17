@@ -42,6 +42,7 @@ import { Chess960, type Square } from "./chess.js/chess";
 import { GameResultOverlay } from "./components/GameResultOverlay";
 import { LuSettings } from "react-icons/lu";
 import { getDefaultKibitzerSettings, Settings } from "./components/Settings";
+import { TCECSocket } from "./TCECWebsocket";
 
 const CLOCK_UPDATE_MS = 25;
 
@@ -59,7 +60,7 @@ function App() {
   const boardElementRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Api>(null);
   const game = useRef(new Chess960());
-  const ws = useRef<TournamentWebSocket>(new CCCWebSocket());
+  const ws = useRef<TournamentWebSocket>(window.location.search.includes("tcec") ? new TCECSocket() : new CCCWebSocket());
 
   const kibitzer = useRef<EngineWorker[]>(null);
   const [fen, setFen] = useState(game.current.fen());
@@ -94,17 +95,13 @@ function App() {
       game.current,
       currentMoveNumber.current
     );
-    const ply =
-      2 * gameAtTurn.moveNumber() - (gameAtTurn.turn() === "w" ? 1 : 0) - 1;
 
-    if (liveInfosRef.current.black.at(ply)) {
+    if (gameAtTurn.turn() === "w") {
       const liveInfoBlack = liveInfosRef.current.black.at(
         currentMoveNumber.current
       );
       const liveInfoWhite = liveInfosRef.current.white.at(
-        currentMoveNumber.current === -1
-          ? -1
-          : Math.max(0, currentMoveNumber.current - 1)
+        currentMoveNumber.current === -1 ? -1 : currentMoveNumber.current + 1
       );
       const liveInfoKibitzer =
         liveInfosRef.current.kibitzer.at(
@@ -118,9 +115,7 @@ function App() {
       return { liveInfoBlack, liveInfoWhite, liveInfoKibitzer };
     } else {
       const liveInfoBlack = liveInfosRef.current.black.at(
-        currentMoveNumber.current === -1
-          ? -1
-          : Math.max(0, currentMoveNumber.current - 1)
+        currentMoveNumber.current === -1 ? -1 : currentMoveNumber.current + 1
       );
       const liveInfoWhite = liveInfosRef.current.white.at(
         currentMoveNumber.current
@@ -140,7 +135,8 @@ function App() {
 
   function updateBoard(bypass_rate_limit = false) {
     const currentTime = new Date().getTime();
-    if (!bypass_rate_limit && currentTime - lastBoardUpdateRef.current <= 50) return;
+    if (!bypass_rate_limit && currentTime - lastBoardUpdateRef.current <= 50)
+      return;
 
     const gameAtTurn = getGameAtMoveNumber(
       game.current,
@@ -171,7 +167,7 @@ function App() {
       const pv = liveInfoBlack.info.pv.split(" ");
       const nextMove = turn == "b" ? pv[0] : pv[1];
 
-      if (nextMove == moveWhite) {
+      if (nextMove && nextMove == moveWhite) {
         arrows[0].brush = "agree";
       } else if (nextMove && nextMove.length >= 4)
         arrows.push({
@@ -227,7 +223,8 @@ function App() {
   function updateClocks() {
     setClocks((currentClock) => {
       if (!currentClock) return currentClock;
-      if (game.current.getHeaders()["Termination"]) return { ...currentClock };
+      const result = game.current.getHeaders()["Result"];
+      if (result && result !== "*") return { ...currentClock };
 
       let wtime = Number(currentClock.wtime);
       let btime = Number(currentClock.btime);
@@ -275,13 +272,17 @@ function App() {
         break;
 
       case "liveInfo":
-        if (msg.info.color == "white") {
+        const updatedMsg = {
+          ...msg,
+          info: { ...msg.info, ply: msg.info.ply + 1 },
+        };
+        if (updatedMsg.info.color == "white") {
           const newLiveInfos = [...liveInfosRef.current.white];
-          newLiveInfos[msg.info.ply] = msg;
+          newLiveInfos[updatedMsg.info.ply] = updatedMsg;
           liveInfosRef.current.white = newLiveInfos;
         } else {
           const newLiveInfos = [...liveInfosRef.current.black];
-          newLiveInfos[msg.info.ply] = msg;
+          newLiveInfos[updatedMsg.info.ply] = updatedMsg;
           liveInfosRef.current.black = newLiveInfos;
         }
 
@@ -441,7 +442,7 @@ function App() {
             }
           }
         }, 0);
-        const perf = 100 * points / playedGames.length;
+        const perf = (100 * points) / playedGames.length;
         return { ...engine, perf: perf.toFixed(1), points: points.toFixed(1) };
       })
       .sort((a, b) => Number(b.perf) - Number(a.perf));
@@ -456,7 +457,7 @@ function App() {
 
   const pgnHeaders = game.current.getHeaders();
   const termination =
-    cccGame?.gameDetails?.termination ?? pgnHeaders["Termination"];
+    cccGame?.gameDetails?.termination ?? pgnHeaders["Termination"] ?? pgnHeaders["TerminationDetails"];
   const result = pgnHeaders["Result"];
 
   return (
@@ -526,9 +527,12 @@ function App() {
           className="borderRadiusBottom"
         />
 
-        {termination && result && currentMoveNumber.current === -1 && (
-          <GameResultOverlay result={result} termination={termination} />
-        )}
+        {termination &&
+          result &&
+          result !== "*" &&
+          currentMoveNumber.current === -1 && (
+            <GameResultOverlay result={result} termination={termination} />
+          )}
       </div>
 
       <div className="movesWindow">
@@ -586,7 +590,7 @@ function App() {
 
       <div className="scheduleWindow">
         <h4>Schedule</h4>
-        {cccEvent && cccGame && cccEventList ? (
+        {cccEvent && cccGame ? (
           <Schedule
             event={cccEvent}
             engines={engines}

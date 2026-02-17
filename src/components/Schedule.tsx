@@ -153,11 +153,11 @@ const Schedule = memo(
                 <span className="round">#{i + 1}</span>
                 <EngineLogo engine={gameWhite} size={28} />
                 <span className={"engineName " + whiteClass}>
-                  {gameWhite.name}
+                  {gameWhite.name.split(" ")[0]}
                 </span>
                 <span className="vs">{vsText}</span>
                 <span className={"engineName " + blackClass}>
-                  {gameBlack.name}
+                  {gameBlack.name.split(" ")[0]}
                 </span>
                 <EngineLogo engine={gameBlack} size={28} />
               </div>

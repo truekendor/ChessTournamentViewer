@@ -13,6 +13,7 @@ type EngineCardProps = {
 export function formatLargeNumber(value?: string) {
   if (!value) return "-";
   const x = Number(value);
+  if (isNaN(x)) return "-";
   if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
   if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
   if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
@@ -47,7 +48,7 @@ export function EngineCard({
         ["Nodes", formatLargeNumber(data.nodes)],
         ["NPS", formatLargeNumber(data.speed)],
         ["Time", formatTime(time)],
-        ["TB Hits", data.tbhits ?? "-"],
+        ["TB Hits", formatLargeNumber(data.tbhits) ?? "-"],
         ["Hashfull", data.hashfull ?? "-"],
       ];
 
@@ -61,7 +62,7 @@ export function EngineCard({
         )}
 
         <div className="engineName">
-          {!engine ? (placeholder ?? "Loading…") : engine!.name}
+          {!engine ? (placeholder ?? "Loading…") : engine!.name.split(" ")[0]}
         </div>
 
         <div className="engineEval">

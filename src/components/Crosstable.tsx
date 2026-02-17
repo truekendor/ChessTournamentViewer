@@ -234,14 +234,14 @@ export function Crosstable({ engines, cccEvent, onClose }: CrosstableProps) {
           </td>
           {engines.map((engine, i) => (
             <td key={engine.id}>
-              #{i + 1}. {engine.name}
+              #{i + 1}. {engine.name.split(" ")[0]}
             </td>
           ))}
         </tr>
         {engines.map((engine, i) => (
           <tr key={engine.id}>
             <td>
-              #{i + 1}. {engine.name}
+              #{i + 1}. {engine.name.split(" ")[0]}
             </td>
             {engines.map((engine2) => {
               if (engine.id === engine2.id) {

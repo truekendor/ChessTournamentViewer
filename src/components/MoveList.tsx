@@ -11,7 +11,7 @@ import { LuClipboard, LuClipboardList, LuDatabase, LuDownload } from "react-icon
 
 type MoveListProps = {
   game: Chess960;
-  cccGameId: number;
+  cccGameId: string;
   currentMoveNumber: number;
   setCurrentMoveNumber: (moveNumber: number) => void;
 };
@@ -129,7 +129,7 @@ const MoveList = memo(
                 ) : null}
                 <span
                   className={"move" + moveClass}
-                  onClick={() => setCurrentMoveNumber(i)}
+                  onClick={() => setCurrentMoveNumber(i === moves.length - 1 ? -1 : i + 1)}
                 >
                   {move}
                 </span>

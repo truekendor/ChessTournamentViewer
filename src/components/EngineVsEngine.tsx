@@ -74,11 +74,11 @@ export function EngineVsEngine({
       </div>
 
       <div className="engineField">
-        <div className="value">{w?.tbhits ?? "-"}</div>
+        <div className="value">{w?.tbhits ? formatLargeNumber(w.tbhits) : "-"}</div>
       </div>
       <div className="engineLabel">TB Hits</div>
       <div className="engineField">
-        <div className="value">{b?.tbhits ?? "-"}</div>
+        <div className="value">{b?.tbhits ? formatLargeNumber(b.tbhits) : "-"}</div>
       </div>
 
       <div className="engineField">
