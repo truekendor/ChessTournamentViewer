@@ -34,9 +34,9 @@
 .topBar .settingsRow {
   margin-left: auto;
   display: grid;
-  grid-template-columns: calc(100% - 35px - 0.5rem) 35px;
+  grid-template-columns: calc(100% - 35px - var(--gap)) 35px;
   overflow: hidden;
-  gap: 0.5rem;
+  gap: var(--gap);
   justify-content: flex-end;
 }
 

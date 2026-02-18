@@ -75,6 +75,21 @@
   right: 1rem;
 }
 
+@media (max-width: 1920px) {
+  .schedule .game {
+    grid-template-columns: 45px 40px 1fr 6rem 1fr 40px;
+  }
+
+  .schedule .game .engineName {
+    font-size: 0.9rem;
+  }
+
+  .schedule .game .round,
+  .schedule .game .vs {
+    font-size: 0.8rem;
+  }
+}
+
 @media (max-width: 775px) {
   .schedule .game {
     grid-template-columns: 35px 40px 1fr 5rem 1fr 40px;

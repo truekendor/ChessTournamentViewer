@@ -257,6 +257,9 @@ export class TCECSocket implements TournamentWebSocket {
         const engines: CCCEngine[] = Object.keys(crosstable.Table).map(
           (engineName) => {
             const engineData = crosstable.Table[engineName];
+            const correctName = engineName.split(" ")[0];
+            const engineVersion = engineName.split(" ").slice(1).join(" ");
+
             return {
               authors: "",
               config: { command: "", options: {}, timemargin: 0 },
@@ -264,17 +267,17 @@ export class TCECSocket implements TournamentWebSocket {
               elo: String(engineData.Rating),
               facts: "",
               flag: "",
-              id: engineName,
+              id: correctName,
               imageUrl:
                 "https://ctv.yoshie2000.de/tcec/image/engine/" +
-                engineName.split(" ")[0] +
+                correctName +
                 ".png",
-              name: engineName,
+              name: correctName,
               perf: String(engineData.Performance),
               points: String(engineData.Score),
               rating: String(engineData.Rating),
               updatedAt: "",
-              version: "",
+              version: engineVersion,
               website: "",
               year: "",
             };
@@ -300,9 +303,12 @@ export class TCECSocket implements TournamentWebSocket {
           const gameStarted = !!game.Result;
           const gameOver = !!game.Result && game.Result !== "*";
 
+          const black = game.Black.split(" ")[0];
+          const white = game.White.split(" ")[0];
+
           return {
-            blackId: game.Black,
-            blackName: game.Black,
+            blackId: black,
+            blackName: black,
             estimatedStartTime: "",
             gameNr: String(game.Game),
             matchNr: "",
@@ -311,8 +317,8 @@ export class TCECSocket implements TournamentWebSocket {
             roundNr: "",
             timeControl: "",
             variant: "",
-            whiteId: game.White,
-            whiteName: game.White,
+            whiteId: white,
+            whiteName: white,
             outcome: gameOver ? game.Result : undefined,
             timeEnd: gameOver
               ? new Date(startDate.getTime() + duration).toString()
@@ -353,6 +359,8 @@ export class TCECSocket implements TournamentWebSocket {
 
     const game = new Chess960();
     game.loadPgn(pgn);
+    game.setHeader("White", game.getHeaders()["White"].split(" ")[0])
+    game.setHeader("Black", game.getHeaders()["Black"].split(" ")[0])
 
     const gameList = [
       ...this.event.tournamentDetails.schedule.past,
@@ -379,7 +387,7 @@ export class TCECSocket implements TournamentWebSocket {
         gameNr: String(current?.gameNr ?? past.at(-1)?.gameNr ?? ""),
         live: true,
         opening: current?.opening ?? "",
-        pgn,
+        pgn: game.pgn(),
       },
     };
     this.onMessage(gameUpdate);

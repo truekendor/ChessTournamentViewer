@@ -1,7 +1,5 @@
-import { Chessground } from "@lichess-org/chessground";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CCCWebSocket, type TournamentWebSocket } from "./CCCWebsocket";
-import type { Api } from "@lichess-org/chessground/api";
 import type {
   CCCMessage,
   CCCEventUpdate,
@@ -9,7 +7,6 @@ import type {
   CCCClocks,
   CCCGameUpdate,
 } from "./types";
-import type { DrawShape } from "@lichess-org/chessground/draw";
 import {
   CategoryScale,
   Chart,
@@ -22,16 +19,15 @@ import {
 } from "chart.js";
 import { StandingsTable } from "./components/StandingsTable";
 import { GameGraph } from "./components/GameGraph";
-import type { Config } from "@lichess-org/chessground/config";
 import { Schedule } from "./components/Schedule";
 import "./App.css";
+import "./components/Popup.css";
 import {
   extractLiveInfoFromGame,
   type LiveInfoEntry,
 } from "./components/LiveInfo";
 import { Crosstable } from "./components/Crosstable";
 import { EventList } from "./components/EventList";
-import { getGameAtMoveNumber, MoveList } from "./components/MoveList";
 import { Spinner } from "./components/Loading";
 import { NativeWorker } from "./engine/NativeWorker";
 import { type EngineSettings, EngineWorker } from "./engine/EngineWorker";
@@ -43,6 +39,8 @@ import { GameResultOverlay } from "./components/GameResultOverlay";
 import { LuSettings } from "react-icons/lu";
 import { getDefaultKibitzerSettings, Settings } from "./components/Settings";
 import { TCECSocket } from "./TCECWebsocket";
+import { Board, type BoardHandle } from "./components/Board";
+import { MoveList, getGameAtMoveNumber } from "./components/MoveList";
 
 const CLOCK_UPDATE_MS = 25;
 
@@ -57,10 +55,13 @@ Chart.register(
 );
 
 function App() {
-  const boardElementRef = useRef<HTMLDivElement>(null);
-  const boardRef = useRef<Api>(null);
+  const boardHandle = useRef<BoardHandle>(null);
   const game = useRef(new Chess960());
-  const ws = useRef<TournamentWebSocket>(window.location.search.includes("tcec") ? new TCECSocket() : new CCCWebSocket());
+  const ws = useRef<TournamentWebSocket>(
+    window.location.search.includes("tcec")
+      ? new TCECSocket()
+      : new CCCWebSocket()
+  );
 
   const kibitzer = useRef<EngineWorker[]>(null);
   const [fen, setFen] = useState(game.current.fen());
@@ -87,8 +88,6 @@ function App() {
     black: [] as LiveInfoEntry[],
     kibitzer: [] as LiveInfoEntry[],
   });
-
-  const lastBoardUpdateRef = useRef(new Date().getTime());
 
   function getCurrentLiveInfos() {
     const gameAtTurn = getGameAtMoveNumber(
@@ -133,91 +132,18 @@ function App() {
     }
   }
 
-  function updateBoard(bypass_rate_limit = false) {
-    const currentTime = new Date().getTime();
-    if (!bypass_rate_limit && currentTime - lastBoardUpdateRef.current <= 50)
-      return;
-
-    const gameAtTurn = getGameAtMoveNumber(
-      game.current,
-      currentMoveNumber.current
-    );
-    let fen = gameAtTurn.fen();
-    let turn = gameAtTurn.turn();
-
-    const arrows: DrawShape[] = [];
-
+  function updateBoard(bypassRateLimit: boolean = false) {
     const { liveInfoBlack, liveInfoKibitzer, liveInfoWhite } =
       getCurrentLiveInfos();
 
-    let moveWhite: string | null = null;
-    if (liveInfoWhite) {
-      const pv = liveInfoWhite.info.pv.split(" ");
-      const nextMove = turn == "w" ? pv[0] : pv[1];
-      if (nextMove && nextMove.length >= 4) {
-        moveWhite = nextMove;
-        arrows.push({
-          orig: (nextMove.slice(0, 2) as Square) || "a1",
-          dest: (nextMove.slice(2, 4) as Square) || "a1",
-          brush: liveInfoWhite.info.color,
-        });
-      }
-    }
-    if (liveInfoBlack) {
-      const pv = liveInfoBlack.info.pv.split(" ");
-      const nextMove = turn == "b" ? pv[0] : pv[1];
-
-      if (nextMove && nextMove == moveWhite) {
-        arrows[0].brush = "agree";
-      } else if (nextMove && nextMove.length >= 4)
-        arrows.push({
-          orig: (nextMove.slice(0, 2) as Square) || "a1",
-          dest: (nextMove.slice(2, 4) as Square) || "a1",
-          brush: liveInfoBlack.info.color,
-        });
-    }
-    if (liveInfoKibitzer) {
-      const pv = liveInfoKibitzer.info.pv.split(" ");
-      const nextMove = pv[0];
-      if (nextMove && nextMove.length >= 4)
-        arrows.push({
-          orig: (nextMove.slice(0, 2) as Square) || "a1",
-          dest: (nextMove.slice(2, 4) as Square) || "a1",
-          brush: "kibitzer",
-        });
-    }
-
-    let config: Config = {
-      drawable: {
-        // @ts-ignore
-        brushes: {
-          white: { key: "white", color: "#fff", opacity: 1, lineWidth: 10 },
-          black: { key: "black", color: "#000", opacity: 1, lineWidth: 10 },
-          agree: { key: "agree", color: "#43a047", opacity: 1, lineWidth: 10 },
-          kibitzer: {
-            key: "kibitzer",
-            color: "#0D47A1",
-            opacity: 0.75,
-            lineWidth: 5,
-          },
-        },
-        enabled: false,
-        eraseOnMovablePieceClick: false,
-        shapes: arrows,
-      },
-      fen,
-    };
-
-    const history = game.current.history({ verbose: true });
-
-    const lastMove =
-      currentMoveNumber.current === -1
-        ? history.at(-1)
-        : history.at(currentMoveNumber.current - 1);
-    if (lastMove) config.lastMove = [lastMove.from, lastMove.to];
-
-    boardRef.current?.set(config);
-    lastBoardUpdateRef.current = new Date().getTime();
+    boardHandle.current?.updateBoard(
+      game.current,
+      currentMoveNumber.current,
+      liveInfoWhite,
+      liveInfoBlack,
+      liveInfoKibitzer,
+      bypassRateLimit
+    );
   }
 
   function updateClocks() {
@@ -333,18 +259,9 @@ function App() {
   ); // required for MoveList to re-render correctly
 
   useEffect(() => {
-    if (boardRef.current || !boardElementRef.current) return;
-
-    boardRef.current = Chessground(boardElementRef.current, {
-      fen: game.current.fen(),
-      orientation: "white",
-      movable: { free: false, color: undefined, dests: undefined },
-      selectable: { enabled: false },
-    });
-
     ws.current.disconnect();
     ws.current.connect(handleMessage);
-  }, [boardElementRef.current]);
+  }, []);
 
   useEffect(() => {
     const clockTimer = setInterval(updateClocks, CLOCK_UPDATE_MS);
@@ -366,6 +283,7 @@ function App() {
   const activeKibitzer = kibitzer.current?.find((kibitzer) =>
     kibitzer.isReady()
   );
+
   useEffect(() => {
     if (!kibitzer.current || !activeKibitzer) return;
 
@@ -457,8 +375,15 @@ function App() {
 
   const pgnHeaders = game.current.getHeaders();
   const termination =
-    cccGame?.gameDetails?.termination ?? pgnHeaders["Termination"] ?? pgnHeaders["TerminationDetails"];
+    cccGame?.gameDetails?.termination ??
+    pgnHeaders["Termination"] ??
+    pgnHeaders["TerminationDetails"];
   const result = pgnHeaders["Result"];
+
+  const currentFen =
+    currentMoveNumber.current === -1
+      ? game.current.fen()
+      : getGameAtMoveNumber(game.current, currentMoveNumber.current).fen();
 
   return (
     <div className="app">
@@ -508,6 +433,7 @@ function App() {
         latestLiveInfoKibitzer={liveInfoKibitzer}
         clocks={clocks}
         activeKibitzerInfo={activeKibitzer?.getEngineInfo()}
+        fen={currentFen}
       />
 
       <div className="boardWindow">
@@ -518,7 +444,14 @@ function App() {
           placeholder={"Black"}
           className="borderRadiusTop"
         />
-        <div ref={boardElementRef} className="board"></div>
+        <Board id="main-board" ref={boardHandle} />
+        <MoveList
+          game={game.current}
+          currentMoveNumber={currentMoveNumber.current}
+          setCurrentMoveNumber={setCurrentMoveNumber}
+          cccGameId={cccGame?.gameDetails.gameNr}
+          controllers={true}
+        />
         <EngineMinimal
           engine={white}
           info={liveInfoWhite}
@@ -533,23 +466,6 @@ function App() {
           currentMoveNumber.current === -1 && (
             <GameResultOverlay result={result} termination={termination} />
           )}
-      </div>
-
-      <div className="movesWindow">
-        <h4>Move List</h4>
-
-        {cccGame ? (
-          <MoveList
-            game={game.current}
-            currentMoveNumber={currentMoveNumber.current}
-            setCurrentMoveNumber={setCurrentMoveNumber}
-            cccGameId={cccGame.gameDetails.gameNr}
-          />
-        ) : (
-          <div className="sectionSpinner">
-            <Spinner />
-          </div>
-        )}
       </div>
 
       <div className="standingsWindow">

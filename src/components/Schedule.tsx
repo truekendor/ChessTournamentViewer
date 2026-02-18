@@ -148,16 +148,18 @@ const Schedule = memo(
                 className={"game" + gameClass}
                 ref={ref}
                 key={game.gameNr}
-                onClick={() => requestEvent(game.gameNr)}
+                onClick={
+                  game.outcome ? () => requestEvent(game.gameNr) : undefined
+                }
               >
                 <span className="round">#{i + 1}</span>
                 <EngineLogo engine={gameWhite} size={28} />
                 <span className={"engineName " + whiteClass}>
-                  {gameWhite.name.split(" ")[0]}
+                  {gameWhite.name}
                 </span>
                 <span className="vs">{vsText}</span>
                 <span className={"engineName " + blackClass}>
-                  {gameBlack.name.split(" ")[0]}
+                  {gameBlack.name}
                 </span>
                 <EngineLogo engine={gameBlack} size={28} />
               </div>

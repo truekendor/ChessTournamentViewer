@@ -1,8 +1,6 @@
 .standingsWrapper {
   height: 100%;
   overflow: auto;
-
-  --placement-width: 2rem;
 }
 
 .standings {
@@ -10,14 +8,11 @@
   border: 1px solid #232323;
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
 .standingsEntry {
   border-bottom: 1px solid #232323;
-}
-
-.standingsEntry td {
-  padding: 0 0.5rem;
 }
 
 .standingsEntry .engineLogo {
@@ -32,7 +27,7 @@
 }
 
 td.placement {
-  width: var(--placement-width);
+  width: 2.25rem;
   text-align: center;
   color: #a1a1a1;
 }
@@ -66,26 +61,44 @@ td.rating {
   width: 70px;
 }
 
-@media (max-width: 1550px) {
-  .standingsWrapper {
-    font-size: 0.9rem;
-
-    --placement-width: 1rem;
+@media (max-width: 1775px) {
+  td.placement {
+    width: 2.25rem;
   }
 
   td.logo {
     width: 45px;
+    overflow: hidden;
   }
 
   td.score {
-    width: 70px;
+    width: 90px;
+    text-align: right;
   }
 
   td.perf {
-    width: 40px;
+    width: 80px;
+    text-align: right;
+    padding-right: var(--padding);
   }
 
   td.rating {
     display: none;
+  }
+}
+
+@media (max-width: 1550px) {
+  td.perf {
+    width: 70px;
+  }
+}
+
+@media (max-width: 775px) {
+  .standingsWrapper {
+    margin-top: calc(var(--padding) / 2);
+  }
+
+  .standingsWindow h4 {
+    margin-top: calc(var(--padding) / 2) !important;
   }
 }

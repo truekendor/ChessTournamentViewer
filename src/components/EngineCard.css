@@ -1,18 +1,22 @@
 .engineComponent {
   display: flex;
-  flex-direction: column;
   border-radius: 8px;
   background: #343434;
   border: 1px solid #1a1a1a;
-  max-width: 100%;
   overflow: hidden;
+  height: 100%;
 }
 
-.engineComponent > :last-child {
-  flex-grow: 1;
+.engineComponent .engineLeftSection {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.25rem 1rem 0.125rem 0.5rem;
+  width: var(--engine-card-info-width);
+  min-width: var(--engine-card-info-width);
 }
 
-.engineComponent hr {
+.engineComponent .engineLeftSection > hr {
   background: #434343;
   border: none;
   height: 1px;
@@ -26,21 +30,27 @@
 .engineComponent .engineInfoHeader {
   display: flex;
   align-items: center;
-  margin-left: 0.5rem;
-}
-
-.engineComponent .engineEval {
-  margin: 0 1rem 0 auto;
-  font-weight: bold;
+  gap: 0.5rem;
+  padding-bottom: 0.25rem;
 }
 
 .engineComponent .engineInfoTable {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0.5rem 1rem;
+  grid-template-columns: 1fr;
   row-gap: 0.25rem;
-  column-gap: 2rem;
+  margin-left: 0.25rem;
   font-size: 0.9rem;
+  padding: 0.5rem 0;
+  flex-grow: 1;
+}
+
+.engineComponent .engineInfoEval {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .engineComponent .engineField {
@@ -60,11 +70,35 @@
   font-variant-numeric: tabular-nums;
 }
 
-.engineComponent .enginePvWrapper {
-  margin: 0.5rem 1rem;
+.engineComponent .engineRightSection {
   display: flex;
-  align-items: center;
+  height: calc(var(--engine-board-width)) !important;
+  transform: translateY(
+    calc((var(--engine-card-height) - var(--engine-board-width)) / 2)
+  );
+}
+
+.engineComponent .board {
+  border-radius: 4px;
+  height: calc(var(--engine-board-width)) !important;
+  width: calc(var(--engine-board-width)) !important;
   overflow: hidden;
+}
+
+.engineComponent .board cg-container {
+  height: calc(var(--engine-board-width)) !important;
+  width: calc(var(--engine-board-width)) !important;
+}
+
+.engineComponent .board cg-board {
+  background-color: #8ca2ad;
+  aspect-ratio: 1;
+}
+
+.engineComponent .movesWindow {
+  overflow-y: auto;
+  width: var(--engine-card-movelist-width);
+  min-width: var(--engine-card-movelist-width);
 }
 
 .engineComponent .enginePv {
@@ -72,7 +106,6 @@
   line-height: 1rem;
   height: calc(var(--pv-rows) * 1rem);
   overflow: hidden;
-
   display: flex;
   column-gap: 1ch;
   flex-wrap: wrap;
@@ -88,27 +121,31 @@
   color: #a1a1a1;
 }
 
-@media (max-width: 1100px) {
-  .engineComponent {
-    height: fit-content;
+@media (max-width: 1600px) {
+  .engineComponent .engineRightSection {
+    flex-direction: column;
+    height: calc(100% - 2 * var(--padding)) !important;
+    transform: translateY(var(--padding));
   }
 
-  .engineComponent:nth-child(2) {
-    align-self: center;
-  }
-
-  .engineComponent:last-child {
-    align-self: flex-end;
-  }
-
-  .engineComponent .enginePv,
-  .engineComponent .enginePvDivider {
-    display: none;
+  .engineComponent .movesWindow {
+    height: calc(100% - var(--engine-board-width));
+    width: 100%;
+    padding-bottom: 0 !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
   }
 }
 
-@media (max-width: 775px) {
+@media (max-width: 1400px) {
   .engineComponent {
     border: none;
+    padding: 0;
+    height: calc(100% - 44px);
+    width: 100%;
+  }
+
+  .engineComponent .engineLeftSection {
+    width: 100%;
   }
 }
