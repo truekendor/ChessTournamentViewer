@@ -1799,6 +1799,14 @@ export class Chess {
     })
   }
 
+  public turnAt(idx: number) {
+    return this._history.at(idx)?.turn;
+  }
+
+  public length() {
+    return this._history.length;
+  }
+
   protected _movePiece(from: number, to: number) {
     this._hash ^= this._pieceKey(from)
 

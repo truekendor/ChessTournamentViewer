@@ -90,12 +90,10 @@ function App() {
   });
 
   function getCurrentLiveInfos() {
-    const gameAtTurn = getGameAtMoveNumber(
-      game.current,
-      currentMoveNumber.current
-    );
+    const index = currentMoveNumber.current === -1 ? game.current.length() - 2 : currentMoveNumber.current;
+    const turn = game.current.turnAt(index);
 
-    if (gameAtTurn.turn() === "w") {
+    if (turn === "w") {
       const liveInfoBlack = liveInfosRef.current.black.at(
         currentMoveNumber.current
       );
