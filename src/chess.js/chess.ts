@@ -159,6 +159,7 @@ interface History {
   fenEpSquare: number
   halfMoves: number
   moveNumber: number
+  fen: string
 }
 
 export class Move {
@@ -1796,11 +1797,20 @@ export class Chess {
       fenEpSquare: this._fenEpSquare,
       halfMoves: this._halfMoves,
       moveNumber: this._moveNumber,
+      fen: this.fen({ forceEnpassantSquare: true }),
     })
   }
 
+  public fenAt(idx: number) {
+    if (idx < 0 || idx === this.length())
+      return this.fen({ forceEnpassantSquare: true });
+    return this._history[idx].fen;
+  }
+
   public turnAt(idx: number) {
-    return this._history.at(idx)?.turn;
+    if (idx < 0 || idx === this.length())
+      return this.turn();
+    return this._history[idx].turn;
   }
 
   public length() {

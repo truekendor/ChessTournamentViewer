@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import {
   MdKeyboardArrowLeft,
   MdKeyboardArrowRight,
@@ -49,240 +49,250 @@ function moveClass(active: boolean, disagreement: boolean) {
   );
 }
 
-const MoveList = memo(({
-  game,
-  currentMoveNumber,
-  setCurrentMoveNumber,
-  cccGameId,
-  controllers,
-  disagreementMoveIndex,
-  moveNumberOffset = 0,
-}: MoveListProps) => {
-  const moves = game.history();
-  const moveListRef = useRef<HTMLDivElement>(null);
+async function copyToClipboard(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  const startFen = game.getHeaders()["FEN"];
-  const blackMovesFirst = startFen?.split(" ")[1] === "b";
-  const pairStart = blackMovesFirst ? 1 : 0;
+const MoveList = memo(
+  ({
+    game,
+    currentMoveNumber,
+    setCurrentMoveNumber,
+    cccGameId,
+    controllers,
+    disagreementMoveIndex,
+    moveNumberOffset = 0,
+  }: MoveListProps) => {
+    const moves = useMemo(() => game.history(), [game.length()]);
+    const moveListRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (controllers) {
+    const startFen = game.getHeaders()["FEN"];
+    const blackMovesFirst = startFen?.split(" ")[1] === "b";
+    const pairStart = blackMovesFirst ? 1 : 0;
+
+    useEffect(() => {
+      if (controllers) {
+        const el = moveListRef.current;
+        if (!el || currentMoveNumber !== -1) return;
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight;
+        });
+      }
+    }, [moves.length, currentMoveNumber]);
+
+    useEffect(() => {
+      if (controllers) {
+        const handleKeyDown = (e: KeyboardEvent) => {
+          if (
+            e.target instanceof HTMLInputElement ||
+            e.target instanceof HTMLTextAreaElement
+          )
+            return;
+          if (e.key === "ArrowLeft") undoMove();
+          else if (e.key === "ArrowRight") redoMove();
+          else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            undoAllMoves();
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            redoAllMoves();
+          }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+      }
+    }, [currentMoveNumber, moves.length]);
+
+    function undoAllMoves() {
+      setCurrentMoveNumber(0);
       const el = moveListRef.current;
-      if (!el || currentMoveNumber !== -1) return;
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-      });
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollTop = 0;
+        });
+      }
     }
-  }, [moves.length, currentMoveNumber]);
-
-  useEffect(() => {
-    if (controllers) {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement
-        )
-          return;
-        if (e.key === "ArrowLeft") undoMove();
-        else if (e.key === "ArrowRight") redoMove();
-        else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          undoAllMoves();
-        } else if (e.key === "ArrowDown") {
-          e.preventDefault();
-          redoAllMoves();
-        }
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [currentMoveNumber, moves.length]);
-
-  function undoAllMoves() {
-    setCurrentMoveNumber(0);
-    const el = moveListRef.current;
-    if (el) {
-      requestAnimationFrame(() => {
-        el.scrollTop = 0;
-      });
-    }
-  }
-  function redoAllMoves() {
-    setCurrentMoveNumber(-1);
-    const el = moveListRef.current;
-    if (el) {
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-      });
-    }
-  }
-  function undoMove() {
-    if (currentMoveNumber === 0) return;
-    if (currentMoveNumber === -1) {
-      setCurrentMoveNumber(moves.length - 1);
-    } else {
-      setCurrentMoveNumber(currentMoveNumber - 1);
-    }
-  }
-  function redoMove() {
-    if (currentMoveNumber === -1) return;
-    if (currentMoveNumber + 1 >= moves.length) {
+    function redoAllMoves() {
       setCurrentMoveNumber(-1);
-    } else {
-      setCurrentMoveNumber(currentMoveNumber + 1);
+      const el = moveListRef.current;
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight;
+        });
+      }
     }
-  }
-
-  async function copyToClipboard(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      return true;
-    } catch {
-      return false;
+    function undoMove() {
+      if (currentMoveNumber === 0) return;
+      if (currentMoveNumber === -1) {
+        setCurrentMoveNumber(moves.length - 1);
+      } else {
+        setCurrentMoveNumber(currentMoveNumber - 1);
+      }
     }
-  }
+    function redoMove() {
+      if (currentMoveNumber === -1) return;
+      if (currentMoveNumber + 1 >= moves.length) {
+        setCurrentMoveNumber(-1);
+      } else {
+        setCurrentMoveNumber(currentMoveNumber + 1);
+      }
+    }
 
-  const currentGame = () => getGameAtMoveNumber(game, currentMoveNumber);
-  function copyFen() {
-    copyToClipboard(currentGame().fen());
-  }
-  function copyPgn() {
-    copyToClipboard(currentGame().pgn());
-  }
-  function openChessDB() {
-    const url =
-      "https://www.chessdb.cn/queryc_en/?" +
-      getGameAtMoveNumber(game, currentMoveNumber).fen().replaceAll(" ", "_");
-    window.open(url, "_blank");
-  }
-  function downloadLogs() {
-    const url = `https://storage.googleapis.com/chess-1-prod-ccc/gamelogs/game-${cccGameId}.log`;
-    window.open(url, "_blank");
-  }
+    function copyFen() {
+      copyToClipboard(getGameAtMoveNumber(game, currentMoveNumber).fen());
+    }
+    function copyPgn() {
+      copyToClipboard(getGameAtMoveNumber(game, currentMoveNumber).pgn());
+    }
+    function openChessDB() {
+      const url =
+        "https://www.chessdb.cn/queryc_en/?" +
+        getGameAtMoveNumber(game, currentMoveNumber).fen().replaceAll(" ", "_");
+      window.open(url, "_blank");
+    }
+    function downloadLogs() {
+      const url = `https://storage.googleapis.com/chess-1-prod-ccc/gamelogs/game-${cccGameId}.log`;
+      window.open(url, "_blank");
+    }
 
-  return (
-    <div className="movesWindow">
-      <div className="moveList" ref={moveListRef}>
-        <table className="moveTable">
-          <tbody>
-            {blackMovesFirst &&
-              moves.length > 0 &&
-              (() => {
-                const active =
-                  currentMoveNumber === 1 ||
-                  (currentMoveNumber === -1 && moves.length === 1);
-                return (
-                  <tr>
-                    <th
-                      className={"move right" + (active ? " currentMove" : "")}
-                    >
-                      {1 + moveNumberOffset}.
-                    </th>
-                    <td>...</td>
-                    <td>
-                      <span
-                        className={moveClass(
-                          active,
-                          disagreementMoveIndex === 0
-                        )}
-                        onClick={() => setCurrentMoveNumber(1)}
+    return (
+      <div className="movesWindow">
+        <div className="moveList" ref={moveListRef}>
+          <table className="moveTable">
+            <tbody>
+              {blackMovesFirst &&
+                moves.length > 0 &&
+                (() => {
+                  const active =
+                    currentMoveNumber === 1 ||
+                    (currentMoveNumber === -1 && moves.length === 1);
+                  return (
+                    <tr>
+                      <th
+                        className={
+                          "move right" + (active ? " currentMove" : "")
+                        }
                       >
-                        {moves[0]}
-                      </span>
+                        {1 + moveNumberOffset}.
+                      </th>
+                      <td>...</td>
+                      <td>
+                        <span
+                          className={moveClass(
+                            active,
+                            disagreementMoveIndex === 0
+                          )}
+                          onClick={() => setCurrentMoveNumber(1)}
+                        >
+                          {moves[0]}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })()}
+
+              {moves.map((_, i) => {
+                if (i < pairStart || (i - pairStart) % 2 !== 0) return null;
+
+                const whiteMove = moves[i];
+                const blackMove = moves[i + 1];
+                const moveNumber =
+                  moveNumberOffset +
+                  (blackMovesFirst ? (i + 1) / 2 + 1 : i / 2 + 1);
+                const isLatest = currentMoveNumber === -1;
+
+                const whiteActive =
+                  currentMoveNumber === i + 1 ||
+                  (isLatest && i === moves.length - 1);
+                const blackActive =
+                  currentMoveNumber === i + 2 ||
+                  (isLatest && i + 1 === moves.length - 1);
+                const rowActive = whiteActive;
+
+                return (
+                  <tr key={i}>
+                    <th
+                      className={
+                        "move right" + (rowActive ? " currentMove" : "")
+                      }
+                      onClick={() => setCurrentMoveNumber(i + 1)}
+                    >
+                      {moveNumber}.
+                    </th>
+                    <td
+                      className={moveClass(
+                        whiteActive,
+                        disagreementMoveIndex === i
+                      )}
+                      onClick={() => setCurrentMoveNumber(i + 1)}
+                    >
+                      {whiteMove}
+                    </td>
+                    <td>
+                      {blackMove && (
+                        <span
+                          className={moveClass(
+                            blackActive,
+                            disagreementMoveIndex === i + 1
+                          )}
+                          onClick={() => setCurrentMoveNumber(i + 2)}
+                        >
+                          {blackMove}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
-              })()}
-
-            {moves.map((_, i) => {
-              if (i < pairStart || (i - pairStart) % 2 !== 0) return null;
-
-              const whiteMove = moves[i];
-              const blackMove = moves[i + 1];
-              const moveNumber = moveNumberOffset + (blackMovesFirst ? (i + 1) / 2 + 1 : i / 2 + 1);
-              const isLatest = currentMoveNumber === -1;
-
-              const whiteActive =
-                currentMoveNumber === i + 1 ||
-                (isLatest && i === moves.length - 1);
-              const blackActive =
-                currentMoveNumber === i + 2 ||
-                (isLatest && i + 1 === moves.length - 1);
-              const rowActive = whiteActive;
-
-              return (
-                <tr key={i}>
-                  <th
-                    className={"move right" + (rowActive ? " currentMove" : "")}
-                    onClick={() => setCurrentMoveNumber(i + 1)}
-                  >
-                    {moveNumber}.
-                  </th>
-                  <td
-                    className={moveClass(
-                      whiteActive,
-                      disagreementMoveIndex === i
-                    )}
-                    onClick={() => setCurrentMoveNumber(i + 1)}
-                  >
-                    {whiteMove}
-                  </td>
-                  <td>
-                    {blackMove && (
-                      <span
-                        className={moveClass(
-                          blackActive,
-                          disagreementMoveIndex === i + 1
-                        )}
-                        onClick={() => setCurrentMoveNumber(i + 2)}
-                      >
-                        {blackMove}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {controllers && (
-        <div className="moveButtonsWrapper">
-          <div className="moveButtons">
-            <button onClick={undoAllMoves} disabled={currentMoveNumber === 0}>
-              <MdKeyboardDoubleArrowLeft />
-            </button>
-            <button onClick={undoMove} disabled={currentMoveNumber === 0}>
-              <MdKeyboardArrowLeft />
-            </button>
-            <button onClick={redoMove} disabled={currentMoveNumber === -1}>
-              <MdKeyboardArrowRight />
-            </button>
-            <button onClick={redoAllMoves} disabled={currentMoveNumber === -1}>
-              <MdKeyboardDoubleArrowRight />
-            </button>
-          </div>
-          <div className="moveButtons">
-            <button onClick={copyFen} style={{ fontSize: "1rem" }}>
-              <LuClipboard />
-            </button>
-            <button onClick={copyPgn} style={{ fontSize: "1rem" }}>
-              <LuClipboardList />
-            </button>
-            <button onClick={openChessDB} style={{ fontSize: "1rem" }}>
-              <LuDatabase />
-            </button>
-            {game.getHeaders()["Termination"] && (
-              <button onClick={downloadLogs} style={{ fontSize: "1rem" }}>
-                <LuDownload />
-              </button>
-            )}
-          </div>
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
-    </div>
-  );
-});
+
+        {controllers && (
+          <div className="moveButtonsWrapper">
+            <div className="moveButtons">
+              <button onClick={undoAllMoves} disabled={currentMoveNumber === 0}>
+                <MdKeyboardDoubleArrowLeft />
+              </button>
+              <button onClick={undoMove} disabled={currentMoveNumber === 0}>
+                <MdKeyboardArrowLeft />
+              </button>
+              <button onClick={redoMove} disabled={currentMoveNumber === -1}>
+                <MdKeyboardArrowRight />
+              </button>
+              <button
+                onClick={redoAllMoves}
+                disabled={currentMoveNumber === -1}
+              >
+                <MdKeyboardDoubleArrowRight />
+              </button>
+            </div>
+            <div className="moveButtons">
+              <button onClick={copyFen} style={{ fontSize: "1rem" }}>
+                <LuClipboard />
+              </button>
+              <button onClick={copyPgn} style={{ fontSize: "1rem" }}>
+                <LuClipboardList />
+              </button>
+              <button onClick={openChessDB} style={{ fontSize: "1rem" }}>
+                <LuDatabase />
+              </button>
+              {game.getHeaders()["Termination"] && (
+                <button onClick={downloadLogs} style={{ fontSize: "1rem" }}>
+                  <LuDownload />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 export { MoveList };

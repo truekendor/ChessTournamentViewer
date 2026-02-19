@@ -4,7 +4,6 @@ import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
 import type { DrawShape } from "@lichess-org/chessground/draw";
 import type { LiveInfoEntry } from "./LiveInfo";
-import { getGameAtMoveNumber } from "./MoveList";
 import type { Chess960, Square } from "../chess.js/chess";
 import "./Board.css";
 
@@ -53,9 +52,8 @@ export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
       )
         return;
 
-      const gameAtTurn = getGameAtMoveNumber(game, currentMoveNumber);
-      const fen = gameAtTurn.fen();
-      const turn = gameAtTurn.turn();
+      const fen = game.fenAt(currentMoveNumber);
+      const turn = game.turnAt(currentMoveNumber);
 
       const arrows: DrawShape[] = [];
 

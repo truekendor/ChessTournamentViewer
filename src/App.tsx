@@ -40,7 +40,7 @@ import { LuSettings } from "react-icons/lu";
 import { getDefaultKibitzerSettings, Settings } from "./components/Settings";
 import { TCECSocket } from "./TCECWebsocket";
 import { Board, type BoardHandle } from "./components/Board";
-import { MoveList, getGameAtMoveNumber } from "./components/MoveList";
+import { MoveList } from "./components/MoveList";
 
 const CLOCK_UPDATE_MS = 25;
 
@@ -380,10 +380,7 @@ function App() {
     pgnHeaders["TerminationDetails"];
   const result = pgnHeaders["Result"];
 
-  const currentFen =
-    currentMoveNumber.current === -1
-      ? game.current.fen()
-      : getGameAtMoveNumber(game.current, currentMoveNumber.current).fen();
+  const currentFen = game.current.fenAt(currentMoveNumber.current);
 
   return (
     <div className="app">
