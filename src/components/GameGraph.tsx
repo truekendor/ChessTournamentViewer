@@ -4,6 +4,7 @@ import { useState } from "react";
 import "./GameGraph.css";
 import type { LiveInfoEntry } from "./LiveInfo";
 import { formatLargeNumber, formatTime } from "./EngineCard";
+import type { PointElement } from "chart.js";
 
 type GameGraphProps = {
   liveInfosWhite: LiveInfoEntry[];
@@ -173,6 +174,33 @@ export function GameGraph({
             responsive: true,
             maintainAspectRatio: false,
             elements: { line: { tension: 0 } },
+            animations: {
+              y: {
+                from: (ctx: any) => {
+                  const { chart, datasetIndex, dataIndex } = ctx;
+                  const yScale = chart.scales.y;
+
+                  const element = ctx.element as PointElement | undefined;
+                  if (
+                    !element?.$animations?.y?.active() &&
+                    dataIndex ===
+                      chart.data.datasets[datasetIndex].data.length - 1
+                  ) {
+                    // Point is new, and point is the last point of the chart
+                    const dataset = chart.data.datasets[datasetIndex];
+                    for (let i = dataIndex - 1; i >= 0; i--) {
+                      const val = dataset.data[i];
+                      if (typeof val === "number" && !isNaN(val)) {
+                        return yScale.getPixelForValue(val);
+                      }
+                    }
+                  }
+
+                  // Default animation fallback
+                  return undefined;
+                },
+              },
+            },
             plugins: {
               legend: { display: false, onClick: undefined },
               // @ts-ignore

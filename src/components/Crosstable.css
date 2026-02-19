@@ -47,8 +47,8 @@
 }
 
 .crosstable .h2h {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
 }
 
 .crosstable .gamePair {
@@ -56,10 +56,6 @@
   margin-right: 0.125rem;
   display: flex;
   justify-content: space-evenly;
-}
-
-.crosstable .h2hCell {
-  min-width: 11.5rem;
 }
 
 .crosstable .h2hStats {
@@ -77,6 +73,11 @@
 .crosstable .h2hStats .pentaStat {
   font-family: monospace;
   font-variant-numeric: tabular-nums;
+}
+
+.crosstable .h2hStats .pentaStat,
+.crosstable .h2hStats .elo {
+  font-size: 14px;
 }
 
 .crosstable .h2hStats .elo.win {
