@@ -160,7 +160,7 @@ export function extractLiveInfoFromInfoString(raw: string, fen: string) {
   const color = fen.includes(" w ") ? "white" : "black";
   const ply = plyFromFen(fen);
 
-  const time = Number(data[17]);
+  const time = Number(data[data.indexOf("time") + 1]);
   if (isNaN(time)) return null;
 
   let score = "+0.00";
@@ -179,7 +179,7 @@ export function extractLiveInfoFromInfoString(raw: string, fen: string) {
     }
   }
 
-  const bestmove = data[19];
+  const bestmove = data[data.indexOf("pv") + 1];
   const arrow: DrawShape | null =
     bestmove && bestmove.length >= 4
       ? {
