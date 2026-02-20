@@ -71,7 +71,7 @@ export function EngineWindow(props: EngineWindowProps) {
       <EngineCard
         engine={props.activeKibitzerInfo}
         info={props.latestLiveInfoKibitzer}
-        time={Number(props.latestLiveInfoKibitzer?.info?.time ?? 0)}
+        time={Number(props.latestLiveInfoKibitzer?.info?.time ?? 1) || 1}
         placeholder="Kibitzer"
         fen={props.fen}
       />

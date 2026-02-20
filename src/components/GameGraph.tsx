@@ -2,7 +2,7 @@ import { Line } from "react-chartjs-2";
 import type { CCCEngine, CCCLiveInfo } from "../types";
 import { useState } from "react";
 import "./GameGraph.css";
-import type { LiveInfoEntry } from "./LiveInfo";
+import type { LiveInfoEntry } from "../LiveInfo";
 import { formatLargeNumber, formatTime } from "./EngineCard";
 import type { PointElement } from "chart.js";
 

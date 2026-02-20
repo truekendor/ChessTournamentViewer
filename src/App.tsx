@@ -22,10 +22,7 @@ import { GameGraph } from "./components/GameGraph";
 import { Schedule } from "./components/Schedule";
 import "./App.css";
 import "./components/Popup.css";
-import {
-  extractLiveInfoFromGame,
-  type LiveInfoEntry,
-} from "./components/LiveInfo";
+import { extractLiveInfoFromGame, type LiveInfoEntry } from "./LiveInfo";
 import { Crosstable } from "./components/Crosstable";
 import { EventList } from "./components/EventList";
 import { Spinner } from "./components/Loading";
@@ -41,6 +38,7 @@ import { getDefaultKibitzerSettings, Settings } from "./components/Settings";
 import { TCECSocket } from "./TCECWebsocket";
 import { Board, type BoardHandle } from "./components/Board";
 import { MoveList } from "./components/MoveList";
+import { loadLiveInfos, saveLiveInfos } from "./LocalStorage";
 
 const CLOCK_UPDATE_MS = 25;
 
@@ -68,7 +66,7 @@ function App() {
 
   const [popupState, setPopupState] = useState<string>();
   const [cccEventList, setCccEventList] = useState<CCCEventsListUpdate>();
-  const [cccEvent, setCccEvent] = useState<CCCEventUpdate>();
+  const cccEvent = useRef<CCCEventUpdate>(undefined);
   const [cccGame, setCccGame] = useState<CCCGameUpdate>();
   const [clocks, setClocks] = useState<CCCClocks>({
     binc: "0",
@@ -90,51 +88,38 @@ function App() {
   });
 
   function getCurrentLiveInfos() {
-    const moveNumber = currentMoveNumber.current === game.current.length() ? -1 : currentMoveNumber.current;
+    const moveNumber =
+      currentMoveNumber.current === game.current.length()
+        ? -1
+        : currentMoveNumber.current;
 
     const index = moveNumber === -1 ? game.current.length() - 2 : moveNumber;
     const turn = game.current.turnAt(index);
 
     if (turn === "w") {
-      const liveInfoBlack = liveInfosRef.current.black.at(
-        moveNumber
-      );
+      const liveInfoBlack = liveInfosRef.current.black.at(moveNumber);
       const liveInfoWhite = liveInfosRef.current.white.at(
         moveNumber === -1 ? -1 : moveNumber + 1
       );
       const liveInfoKibitzer =
-        liveInfosRef.current.kibitzer.at(
-          liveInfoBlack?.info.ply ?? moveNumber
-        ) ??
-        liveInfosRef.current.kibitzer.at(
-          liveInfoBlack?.info.ply
-            ? liveInfoBlack?.info.ply - 1
-            : moveNumber
-        );
+        liveInfosRef.current.kibitzer.at(moveNumber) ??
+        liveInfosRef.current.kibitzer.at(moveNumber - 1);
       return { liveInfoBlack, liveInfoWhite, liveInfoKibitzer };
     } else {
       const liveInfoBlack = liveInfosRef.current.black.at(
         moveNumber === -1 ? -1 : moveNumber + 1
       );
-      const liveInfoWhite = liveInfosRef.current.white.at(
-        moveNumber
-      );
+      const liveInfoWhite = liveInfosRef.current.white.at(moveNumber);
       const liveInfoKibitzer =
-        liveInfosRef.current.kibitzer.at(
-          liveInfoWhite?.info.ply ?? moveNumber
-        ) ??
-        liveInfosRef.current.kibitzer.at(
-          liveInfoWhite?.info.ply
-            ? liveInfoWhite?.info.ply - 1
-            : moveNumber
-        );
+        liveInfosRef.current.kibitzer.at(moveNumber) ??
+        liveInfosRef.current.kibitzer.at(moveNumber - 1);
       return { liveInfoBlack, liveInfoWhite, liveInfoKibitzer };
     }
   }
 
   function updateBoard(bypassRateLimit: boolean = false) {
     const { liveInfoBlack, liveInfoKibitzer, liveInfoWhite } =
-    getCurrentLiveInfos();
+      getCurrentLiveInfos();
 
     boardHandle.current?.updateBoard(
       game.current,
@@ -165,7 +150,7 @@ function App() {
   function handleMessage(msg: CCCMessage) {
     switch (msg.type) {
       case "eventUpdate":
-        setCccEvent(msg);
+        cccEvent.current = msg;
         break;
 
       case "gameUpdate":
@@ -177,17 +162,9 @@ function App() {
         liveInfosRef.current.white = liveInfosWhite;
         liveInfosRef.current.black = liveInfosBlack;
 
-        const liveInfosKibitzer: LiveInfoEntry[] = [];
-        const localStorageID = msg.gameDetails.gameNr + "|";
-        for (
-          let i = 0;
-          i < Math.max(liveInfosBlack.length, liveInfosWhite.length, 500);
-          i++
-        ) {
-          const data = localStorage.getItem(localStorageID + i);
-          if (data) liveInfosKibitzer[i] = JSON.parse(data);
-        }
-        liveInfosRef.current.kibitzer = liveInfosKibitzer;
+        liveInfosRef.current.kibitzer = cccEvent.current
+          ? loadLiveInfos(cccEvent.current, msg)
+          : [];
 
         currentMoveNumber.current = -1;
         updateBoard();
@@ -295,21 +272,18 @@ function App() {
 
           updateBoard();
 
-          if (cccEvent && cccGame)
-            localStorage.setItem(
-              cccGame.gameDetails.gameNr + "|" + result.liveInfo.info.ply,
-              JSON.stringify(result.liveInfo)
-            );
-
           const newLiveInfos = [...liveInfosRef.current.kibitzer];
           newLiveInfos[result.liveInfo.info.ply] = result.liveInfo;
           liveInfosRef.current.kibitzer = newLiveInfos;
+
+          if (cccEvent.current && cccGame)
+            saveLiveInfos(cccEvent.current, cccGame, newLiveInfos);
         };
       }
     );
   }, [
     activeKibitzer?.getID(),
-    cccEvent?.tournamentDetails.tNr,
+    cccEvent.current?.tournamentDetails.tNr,
     cccGame?.gameDetails.gameNr,
   ]);
 
@@ -328,13 +302,14 @@ function App() {
     getCurrentLiveInfos();
 
   const engines = useMemo(() => {
-    if (!cccEvent?.tournamentDetails?.engines) return [];
+    if (!cccEvent.current?.tournamentDetails?.engines) return [];
 
-    return cccEvent.tournamentDetails.engines
+    return cccEvent.current.tournamentDetails.engines
       .map((engine) => {
-        const playedGames = cccEvent.tournamentDetails.schedule.past.filter(
-          (game) => game.blackId === engine.id || game.whiteId === engine.id
-        );
+        const playedGames =
+          cccEvent.current!.tournamentDetails.schedule.past.filter(
+            (game) => game.blackId === engine.id || game.whiteId === engine.id
+          );
         const points = playedGames.reduce((prev, cur) => {
           if (cur.blackId === engine.id) {
             switch (cur.outcome) {
@@ -364,7 +339,7 @@ function App() {
         return { ...engine, perf: perf.toFixed(1), points: points.toFixed(1) };
       })
       .sort((a, b) => Number(b.perf) - Number(a.perf));
-  }, [cccEvent]);
+  }, [cccEvent.current]);
 
   const white = engines.find(
     (engine) => engine.name === game.current.getHeaders()["White"]
@@ -386,10 +361,10 @@ function App() {
     <div className="app">
       {popupState && (
         <div className="popup">
-          {popupState === "crosstable" && cccEvent && (
+          {popupState === "crosstable" && cccEvent.current && (
             <Crosstable
               engines={engines}
-              cccEvent={cccEvent}
+              cccEvent={cccEvent.current}
               onClose={() => setPopupState(undefined)}
             />
           )}
@@ -406,15 +381,15 @@ function App() {
       <div className="topBar">
         <div className="currentEvent">
           Chess Tournament Viewer
-          {cccEvent?.tournamentDetails.name
-            ? " - " + cccEvent?.tournamentDetails.name
+          {cccEvent.current?.tournamentDetails.name
+            ? " - " + cccEvent.current?.tournamentDetails.name
             : ""}
         </div>
         <div className="settingsRow">
           <EventList
             eventList={cccEventList}
             requestEvent={requestEvent}
-            selectedEvent={cccEvent}
+            selectedEvent={cccEvent.current}
           />
           <button onClick={() => setPopupState("settings")}>
             <LuSettings />
@@ -460,7 +435,8 @@ function App() {
         {termination &&
           result &&
           result !== "*" &&
-          (currentMoveNumber.current === -1 || currentMoveNumber.current === game.current.length()) && (
+          (currentMoveNumber.current === -1 ||
+            currentMoveNumber.current === game.current.length()) && (
             <GameResultOverlay result={result} termination={termination} />
           )}
       </div>
@@ -503,9 +479,9 @@ function App() {
 
       <div className="scheduleWindow">
         <h4>Schedule</h4>
-        {cccEvent && cccGame ? (
+        {cccEvent.current && cccGame ? (
           <Schedule
-            event={cccEvent}
+            event={cccEvent.current}
             engines={engines}
             requestEvent={requestEvent}
             selectedGame={cccGame}

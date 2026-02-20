@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
 import type { DrawShape } from "@lichess-org/chessground/draw";
-import type { LiveInfoEntry } from "./LiveInfo";
+import type { LiveInfoEntry } from "../LiveInfo";
 import type { Chess960, Square } from "../chess.js/chess";
 import "./Board.css";
 

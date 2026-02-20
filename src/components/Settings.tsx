@@ -2,6 +2,7 @@ import { MdOutlineClose } from "react-icons/md";
 import type { EngineSettings } from "../engine/EngineWorker";
 import "./Settings.css";
 import { useState } from "react";
+import { loadSettings, saveSettings } from "../LocalStorage";
 
 type SettingsProps = {
   kibitzerSettings: EngineSettings;
@@ -10,15 +11,17 @@ type SettingsProps = {
 };
 
 export function getDefaultKibitzerSettings(): EngineSettings {
-  return {
-    hash: localStorage.getItem("kibitzerHash")
-      ? Number(localStorage.getItem("kibitzerHash"))
+  const settings = loadSettings();
+
+  const loadedSettings = {
+    hash: settings["hash"] ? Number(settings["hash"]) : 1,
+    threads: settings["threads"]
+      ? Number(settings["threads"])
       : 1,
-    threads: localStorage.getItem("kibitzerThreads")
-      ? Number(localStorage.getItem("kibitzerThreads"))
-      : 1,
-    enableKibitzer: localStorage.getItem("kibitzerEnabled") === "true",
+    enableKibitzer: settings["enableKibitzer"] === "true",
   };
+
+  return loadedSettings;
 }
 
 export function Settings({
@@ -33,10 +36,9 @@ export function Settings({
   );
 
   function applySettings() {
-    localStorage.setItem("kibitzerHash", String(hash));
-    localStorage.setItem("kibitzerThreads", String(threads));
-    localStorage.setItem("kibitzerEnabled", String(enableKibitzer));
-    setKibitzerSettings({ hash, threads, enableKibitzer });
+    const settings = { hash, threads, enableKibitzer };
+    saveSettings(settings);
+    setKibitzerSettings(settings);
   }
 
   return (

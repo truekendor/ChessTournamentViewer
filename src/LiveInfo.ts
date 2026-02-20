@@ -1,6 +1,6 @@
 import type { DrawShape } from "@lichess-org/chessground/draw";
-import { Chess960, type Square } from "../chess.js/chess";
-import type { CCCLiveInfo } from "../types";
+import { Chess960, type Square } from "./chess.js/chess";
+import type { CCCLiveInfo } from "./types";
 
 export type LiveInfoEntry = CCCLiveInfo | undefined;
 

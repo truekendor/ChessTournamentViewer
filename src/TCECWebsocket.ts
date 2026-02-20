@@ -13,7 +13,7 @@ import {
   extractLiveInfoFromInfoString,
   extractLiveInfoFromTCECComment,
   plyFromFen,
-} from "./components/LiveInfo";
+} from "./LiveInfo";
 
 export class TCECSocket implements TournamentWebSocket {
   private socket: SocketIOClient.Socket | null = null;
