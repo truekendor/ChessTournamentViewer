@@ -865,7 +865,7 @@ export class Chess {
   }
 
   fen({
-    forceEnpassantSquare = false,
+    forceEnpassantSquare = true,
   }: { forceEnpassantSquare?: boolean } = {}) {
     let empty = 0
     let fen = ''
@@ -1797,13 +1797,13 @@ export class Chess {
       fenEpSquare: this._fenEpSquare,
       halfMoves: this._halfMoves,
       moveNumber: this._moveNumber,
-      fen: this.fen({ forceEnpassantSquare: true }),
+      fen: this.fen(),
     })
   }
 
   public fenAt(idx: number) {
     if (idx < 0 || idx === this.length())
-      return this.fen({ forceEnpassantSquare: true });
+      return this.fen();
     return this._history[idx].fen;
   }
 

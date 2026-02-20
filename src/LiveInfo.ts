@@ -197,7 +197,7 @@ export function extractLiveInfoFromInfoString(raw: string, fen: string) {
       score,
       depth: data[data.indexOf("depth") + 1],
       name: "",
-      hashfull: data[data.indexOf("hashfull") + 1],
+      hashfull: data.includes("hashfull") ? data[data.indexOf("hashfull") + 1] : "-",
       multipv: data[data.indexOf("multipv") + 1],
       nodes: data[data.indexOf("nodes") + 1],
       pv: data.slice(data.indexOf("pv") + 1).join(" "),
