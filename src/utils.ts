@@ -1,7 +1,7 @@
 import { Chess960 } from "./chess.js/chess";
 import type { CCCLiveInfo } from "./types";
 
-export function buildPvGame(fen: string, pv: string, pvMoveNumber: number) {
+export function buildPvGame(fen: string, moves: string[], pvMoveNumber: number) {
   const game = new Chess960();
 
   try {
@@ -9,10 +9,6 @@ export function buildPvGame(fen: string, pv: string, pvMoveNumber: number) {
   } catch {
     return game;
   }
-
-  if (!pv) return game;
-
-  const moves = pv.trim().split(/\s+/);
 
   for (let i = 0; i < moves.length; i++) {
     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
@@ -49,14 +45,14 @@ export function normalizePv(
   pv: string,
   engineColor: string,
   fen: string
-): string {
+): string[] {
   const turn = fen.split(" ")[1];
   const turnColor = turn === "w" ? "white" : "black";
+  const moves = pv.trim().split(/\s+/);
   if (engineColor !== turnColor) {
-    const moves = pv.trim().split(/\s+/);
-    return moves.slice(1).join(" ");
+    return moves.slice(1);
   }
-  return pv;
+  return moves;
 }
 
 export function findPvDisagreementPoint(
@@ -74,10 +70,8 @@ export function findPvDisagreementPoint(
 
   // Normalize both PVs to start from the current position, then compare directly
   const myMoves = normalizePv(myData.pv, myData.color, fen)
-    .split(/\s+/)
     .filter(Boolean);
   const opponentMoves = normalizePv(opponentData.pv, opponentData.color, fen)
-    .split(/\s+/)
     .filter(Boolean);
 
   for (let i = 0; i < Math.min(myMoves.length, opponentMoves.length); i++) {

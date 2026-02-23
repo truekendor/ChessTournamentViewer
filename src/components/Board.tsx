@@ -12,7 +12,7 @@ const BOARD_THROTTLE_MS = 50;
 export type BoardHandle = {
   updateBoard: (
     game: Chess960,
-    currentMoveNumber: number,
+    currentMove: number,
     liveInfosWhite?: LiveInfoEntry,
     liveInfosBlack?: LiveInfoEntry,
     liveInfosKibitzer?: LiveInfoEntry,
@@ -20,7 +20,9 @@ export type BoardHandle = {
   ) => void;
 };
 
-export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
+type BoardProps = { id?: string; animated: boolean };
+
+export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
   const boardElementRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Api>(null);
   const lastBoardUpdateRef = useRef(new Date().getTime());
@@ -31,13 +33,14 @@ export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
       orientation: "white",
       movable: { free: false, color: undefined, dests: undefined },
       selectable: { enabled: false },
+      animation: { enabled: props.animated },
     });
   }, []);
 
   useImperativeHandle(ref, () => ({
     updateBoard(
       game,
-      currentMoveNumber,
+      currentMove,
       liveInfoWhite,
       liveInfoBlack,
       liveInfoKibitzer,
@@ -52,8 +55,9 @@ export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
       )
         return;
 
-      const fen = game.fenAt(currentMoveNumber);
-      const turn = game.turnAt(currentMoveNumber);
+      const fen = game.fenAt(currentMove);
+      const turn = game.turnAt(currentMove);
+      const lastMove = game.moveAt(currentMove);
 
       const arrows: DrawShape[] = [];
 
@@ -97,12 +101,6 @@ export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
         }
       }
 
-      const history = game.history({ verbose: true });
-      const lastMove =
-        currentMoveNumber === -1
-          ? history.at(-1)
-          : history.at(currentMoveNumber - 1);
-
       const config: Config = {
         drawable: {
           // @ts-ignore
@@ -130,7 +128,9 @@ export const Board = forwardRef<BoardHandle, { id?: string }>((props, ref) => {
         ...(lastMove ? { lastMove: [lastMove.from, lastMove.to] } : {}),
       };
 
-      boardRef.current.set(config);
+      requestAnimationFrame(() => {
+        boardRef.current?.set(config);
+      });
       lastBoardUpdateRef.current = new Date().getTime();
     },
   }));

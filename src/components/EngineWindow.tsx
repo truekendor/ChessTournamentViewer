@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMediaQuery } from "react-responsive";
 import type { EngineWindowProps } from "../types";
 import { EngineCard } from "./EngineCard";
@@ -8,6 +8,13 @@ import "./EngineWindow.css";
 export function EngineWindow(props: EngineWindowProps) {
   const isMobile = useMediaQuery({ maxWidth: 1400 });
   const [activeTab, setActiveTab] = useState<"engines" | "kibitzer">("engines");
+
+  const [wtime, btime, ktime] = useMemo(() => {
+    const wtime = Number(props.clocks?.wtime ?? 0);
+    const btime = Number(props.clocks?.btime ?? 0);
+    const ktime = Number(props.latestLiveInfoKibitzer?.info?.time ?? 1) || 1;
+    return [wtime, btime, ktime];
+  }, [props.clocks?.wtime, props.clocks?.btime, props.latestLiveInfoKibitzer?.info?.time]);
 
   if (isMobile) {
     return (
@@ -34,14 +41,14 @@ export function EngineWindow(props: EngineWindowProps) {
             black={props.black}
             whiteInfo={props.latestLiveInfoWhite}
             blackInfo={props.latestLiveInfoBlack}
-            wtime={Number(props.clocks?.wtime ?? 0)}
-            btime={Number(props.clocks?.btime ?? 0)}
+            wtime={wtime}
+            btime={btime}
           />
         ) : (
           <EngineCard
             engine={props.activeKibitzerInfo}
             info={props.latestLiveInfoKibitzer}
-            time={Number(props.latestLiveInfoKibitzer?.info?.time ?? 0)}
+            time={ktime}
             placeholder="Kibitzer"
             fen={props.fen}
           />
@@ -56,7 +63,7 @@ export function EngineWindow(props: EngineWindowProps) {
         engine={props.black}
         info={props.latestLiveInfoBlack}
         opponentInfo={props.latestLiveInfoWhite}
-        time={Number(props.clocks?.btime ?? 0)}
+        time={btime}
         placeholder="Black"
         fen={props.fen}
       />
@@ -64,14 +71,14 @@ export function EngineWindow(props: EngineWindowProps) {
         engine={props.white}
         info={props.latestLiveInfoWhite}
         opponentInfo={props.latestLiveInfoBlack}
-        time={Number(props.clocks?.wtime ?? 0)}
+        time={wtime}
         placeholder="White"
         fen={props.fen}
       />
       <EngineCard
         engine={props.activeKibitzerInfo}
         info={props.latestLiveInfoKibitzer}
-        time={Number(props.latestLiveInfoKibitzer?.info?.time ?? 1) || 1}
+        time={ktime}
         placeholder="Kibitzer"
         fen={props.fen}
       />
