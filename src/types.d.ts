@@ -82,6 +82,7 @@ type CCCLiveInfo = {
     nodes: string;
     ply: number;
     pv: string;
+    pvSan: string;
     score: string;
     seldepth: string;
     speed: string;

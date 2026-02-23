@@ -39,6 +39,7 @@ import { TCECSocket } from "./TCECWebsocket";
 import { Board, type BoardHandle } from "./components/Board";
 import { MoveList } from "./components/MoveList";
 import { loadLiveInfos, saveLiveInfos } from "./LocalStorage";
+import { uciToSan } from "./utils";
 
 const CLOCK_UPDATE_MS = 100;
 
@@ -180,6 +181,11 @@ function App() {
           ...msg,
           info: { ...msg.info, ply: msg.info.ply + 1 },
         };
+
+        if (ws.current instanceof CCCWebSocket) {
+          updatedMsg.info.pvSan = uciToSan(game.current.fen(), updatedMsg.info.pv.split(" ")).join(" ");
+        }
+
         if (updatedMsg.info.color == "white") {
           const newLiveInfos = [...liveInfosRef.current.white];
           newLiveInfos[updatedMsg.info.ply] = updatedMsg;

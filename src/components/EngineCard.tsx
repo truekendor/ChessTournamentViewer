@@ -57,8 +57,8 @@ const EngineCard = memo(
       if (loading || !fen || !data?.color) return undefined;
 
       pvMoveNumber.current = -1;
-      return normalizePv(data.pv, data.color, fen);
-    }, [loading, data?.pv, data?.color, fen]);
+      return normalizePv(data.pvSan, data.color, fen);
+    }, [loading, data?.pvSan, data?.color, fen]);
 
     useEffect(() => {
       if (!fen || !moves) return;

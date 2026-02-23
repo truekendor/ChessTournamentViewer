@@ -94,6 +94,7 @@ export class TCECSocket implements TournamentWebSocket {
         infoString,
         this.game.fen()
       );
+      console.log(liveInfo?.liveInfo.info.pv)
       if (liveInfo) onMessage(liveInfo.liveInfo);
     });
 
