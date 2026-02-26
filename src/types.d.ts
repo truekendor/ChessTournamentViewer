@@ -111,11 +111,7 @@ type CCCResult = {
   blackName;
 };
 
-type CCCKibitzer = {
-  type: "kibitzer";
-  engine: CCCEngine;
-  color: string;
-}
+type CCCKibitzer = { type: "kibitzer"; engine: CCCEngine; color: string };
 
 export type CCCMessage =
   | CCCLiveInfo
@@ -126,3 +122,9 @@ export type CCCMessage =
   | CCCEventsListUpdate
   | CCCResult
   | CCCKibitzer;
+
+export type Nullish<T extends object> = {
+  [K in keyof T]: T[K] extends (arg: infer Params) => infer Return
+    ? (args: Params | null) => Return
+    : T[K] | null;
+};
