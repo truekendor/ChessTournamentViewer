@@ -17,7 +17,15 @@ function formatDuration(value: number) {
 }
 
 function formatOutcome(outcome: string) {
-    return outcome.replace(/-/, "\u2013"); // en dash
+  return outcome.replace(/-/, "\u2013"); // en dash
+}
+
+function estimateGameDuration(mainTimeMins: number, addedTimeSec: number) {
+  const AVERAGE_MOVES_PER_CHESS_GAME = 75;
+  // ccc provides main time in minutes format, we need seconds
+  mainTimeMins = mainTimeMins * 60;
+
+  return 2 * (AVERAGE_MOVES_PER_CHESS_GAME * addedTimeSec + mainTimeMins);
 }
 
 const Schedule = memo(
@@ -87,11 +95,18 @@ const Schedule = memo(
         );
       })
       .filter((duration) => !!duration) as number[];
-    const averageDuration =
-      durationPerGame.reduce((prev, cur) => prev! + cur!, 0) /
-      durationPerGame.length /
-      1000 /
-      60;
+
+    const timePerGameEstimationMS =
+      estimateGameDuration(
+        event.tournamentDetails.tc.init,
+        event.tournamentDetails.tc.incr
+      ) * 1000;
+
+    durationPerGame.push(timePerGameEstimationMS);
+
+    const durationSum = durationPerGame.reduce((prev, cur) => prev! + cur!, 0);
+    const averageDuration = durationSum / durationPerGame.length / 1000 / 60;
+
     const currentGameIdx = event.tournamentDetails.schedule.past.length;
 
     return (
@@ -100,10 +115,14 @@ const Schedule = memo(
           {gamesList.map((game, i) => {
             const gameWhite = engines.find(
               (engine) => engine.id === game.whiteId
-            )!!;
+            );
             const gameBlack = engines.find(
               (engine) => engine.id === game.blackId
-            )!!;
+            );
+
+            if (gameWhite === undefined || gameBlack === undefined) {
+              return;
+            }
 
             const whiteClass =
               game.outcome === "1-0"
