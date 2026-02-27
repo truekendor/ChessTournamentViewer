@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { EngineLogo } from "./EngineLogo";
 import { EnginePV } from "./EnginePV";
 import { EngineStats } from "./EngineStats";
-import type { EngineWindowProps } from "./EngineWindow";
+import type { EngineWindoEngineWindowProps } from "./EngineWindow";
 import { findPvDisagreementPoint } from "../utils";
 import "./EngineWindowMobile.css";
 
@@ -41,7 +41,9 @@ export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
   return (
     <div className="engineWindowMobile">
       <div className="engineTabs">
-        {TABS.filter((tab) => !tab.includes("Kibitzer") || activeKibitzers.length > 0).map((tab) => (
+        {TABS.filter(
+          (tab) => !tab.includes("Kibitzer") || activeKibitzers.length > 0
+        ).map((tab) => (
           <button
             key={tab}
             className={activeTab === tab ? "active" : ""}
@@ -70,7 +72,7 @@ export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
                     engine={liveInfos[color].engineInfo}
                     key={color}
                   />
-                  <span>{liveInfos[color].engineInfo.name}</span>
+                  <span>{liveInfos[color].engineInfo?.name}</span>
                 </span>
               </th>
             ))}
