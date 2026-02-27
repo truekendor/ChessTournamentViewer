@@ -5,6 +5,7 @@ import { EngineStats } from "./EngineStats";
 import type { EngineWindoEngineWindowProps } from "./EngineWindow";
 import { findPvDisagreementPoint } from "../utils";
 import "./EngineWindowMobile.css";
+import { EmptyEngineDefinition } from "../LiveInfo";
 
 const TABS = ["Engines", "Engine PVs", "Kibitzers", "Kibitzer PVs"] as const;
 type Tab = (typeof TABS)[number];
@@ -69,7 +70,9 @@ export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
               <th key={color}>
                 <span className="engineHeader">
                   <EngineLogo
-                    engine={liveInfos[color].engineInfo}
+                    engine={
+                      liveInfos[color].engineInfo || EmptyEngineDefinition
+                    }
                     key={color}
                   />
                   <span>{liveInfos[color].engineInfo?.name}</span>
