@@ -24,12 +24,12 @@ type ChessContext = {
 };
 
 const BOARD_THROTTLE_MS = 50;
-const emptyBoardFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0";
+const startingPosFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0";
 
 const createChessStore = () => {
   return create<ChessContext>()(
     immer((set, get) => ({
-      game: new Chess960(emptyBoardFen),
+      game: new Chess960(startingPosFEN),
       boardElement: null,
       boardApi: null,
       lastBoardUpdateTime: 0,
