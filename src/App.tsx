@@ -329,7 +329,12 @@ function App() {
 
   useEffect(() => {
     if (isTCEC) {
-      const wsInstance = ws.current as TCECSocket;
+      const isSocketIOSocket = ws.current instanceof TCECSocket;
+      if (!isSocketIOSocket) {
+        return;
+      }
+
+      const wsInstance = ws.current;
 
       if (!wsInstance.socket) {
         wsInstance.connect(handleMessage);
@@ -340,18 +345,18 @@ function App() {
       return;
     }
 
-    const wsInstance = ws.current;
+    const wsInstance = ws.current as CCCWebSocket;
 
     if (
-      !wsInstance.ws ||
-      wsInstance.ws.readyState === wsInstance.ws.CLOSING ||
-      wsInstance.ws.readyState === wsInstance.ws.CLOSED ||
-      wsInstance.ws.readyState === undefined
+      !wsInstance.socket ||
+      wsInstance.socket.readyState === wsInstance.socket.CLOSING ||
+      wsInstance.socket.readyState === wsInstance.socket.CLOSED ||
+      wsInstance.socket.readyState === undefined
     ) {
       wsInstance.connect(handleMessage);
     } else if (
-      wsInstance.ws.readyState === wsInstance.ws.OPEN ||
-      wsInstance.ws.readyState === wsInstance.ws.CONNECTING
+      wsInstance.socket.readyState === wsInstance.socket.OPEN ||
+      wsInstance.socket.readyState === wsInstance.socket.CONNECTING
     ) {
       wsInstance.setHandler(handleMessage);
     }

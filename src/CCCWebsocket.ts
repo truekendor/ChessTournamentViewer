@@ -6,29 +6,29 @@ export interface TournamentWebSocket {
 
   disconnect: () => void;
   send: (msg: unknown) => void;
-  ws: WebSocket | null;
+  socket: WebSocket | SocketIOClient.Socket | null;
 }
 
 export class CCCWebSocket implements TournamentWebSocket {
   private url: string = "wss://ccc-api.gcp-prod.chess.com/ws";
-  ws: WebSocket | null = new WebSocket(this.url);
+  socket: WebSocket | null = new WebSocket(this.url);
 
   private cb: (message: CCCMessage) => void = () => {};
 
   connect(onMessage: (message: CCCMessage) => void) {
-    if (this.ws !== null) {
+    if (this.socket !== null) {
       return;
     }
 
     this.cb = onMessage;
-    this.ws = new WebSocket(this.url);
+    this.socket = new WebSocket(this.url);
 
-    this.ws.onopen = () => {
+    this.socket.onopen = () => {
       this.send({ type: "requestEvent" });
       this.send({ type: "requestEventsListUpdate" });
     };
 
-    this.ws.onmessage = (e) => {
+    this.socket.onmessage = (e) => {
       const messages = JSON.parse(e.data) as CCCMessage[];
       for (const msg of messages) {
         if (msg.type === "eventUpdate") {
@@ -40,11 +40,11 @@ export class CCCWebSocket implements TournamentWebSocket {
       }
     };
 
-    this.ws.onclose = () => {
-      this.ws = null;
+    this.socket.onclose = () => {
+      this.socket = null;
     };
 
-    this.ws.onerror = () => {
+    this.socket.onerror = () => {
       // this.ws?.close();
       console.log("on eerror");
     };
@@ -53,7 +53,7 @@ export class CCCWebSocket implements TournamentWebSocket {
   setHandler(onMessage: (message: CCCMessage) => void) {
     this.cb = onMessage;
 
-    if (this.ws === null) {
+    if (this.socket === null) {
       console.log(`
           _DEV delete this log later
           should never reach this clause
@@ -61,39 +61,39 @@ export class CCCWebSocket implements TournamentWebSocket {
       return;
     }
 
-    this.ws.onopen = () => {
+    this.socket.onopen = () => {
       this.send({ type: "requestEvent" });
       this.send({ type: "requestEventsListUpdate" });
     };
 
-    this.ws.onmessage = (e) => {
+    this.socket.onmessage = (e) => {
       const messages = JSON.parse(e.data) as CCCMessage[];
       for (const msg of messages) {
         this.cb(msg);
       }
     };
 
-    this.ws.onclose = () => {
-      this.ws = null;
+    this.socket.onclose = () => {
+      this.socket = null;
     };
 
-    this.ws.onerror = () => {
+    this.socket.onerror = () => {
       // this.ws?.close();
       console.log("on eerror");
     };
 
-    this.ws.onmessage = (e) => {
+    this.socket.onmessage = (e) => {
       const messages = JSON.parse(e.data) as CCCMessage[];
       for (const msg of messages) this.cb(msg);
     };
   }
 
   disconnect() {
-    this.ws?.close();
+    this.socket?.close();
   }
 
   send(msg: unknown) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(typeof msg === "string" ? msg : JSON.stringify(msg));
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    this.socket.send(typeof msg === "string" ? msg : JSON.stringify(msg));
   }
 }
