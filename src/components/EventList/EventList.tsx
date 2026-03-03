@@ -1,17 +1,21 @@
+import { memo } from "react";
 import { useEventStore } from "../../context/EventContext";
+
 import { LuSettings } from "react-icons/lu";
 import { EventList } from "../EventList";
-import { memo } from "react";
+
+import { usePopup } from "../Popup/PopupContext";
 
 type EventListWindowProps = {
   requestEvent: (gameNr?: string, eventNr?: string) => void;
-  setPopupState: (state: string) => void;
 };
 
 export const EventListWindow = memo(
-  ({ requestEvent, setPopupState }: EventListWindowProps) => {
+  ({ requestEvent }: EventListWindowProps) => {
     const cccEvent = useEventStore((state) => state.cccEvent);
     const cccEventList = useEventStore((state) => state.cccEventList);
+
+    const setPopupState = usePopup((state) => state.setPopupState);
 
     return (
       <header className="topBar">

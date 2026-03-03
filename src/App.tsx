@@ -1,4 +1,4 @@
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CCCWebSocket, type TournamentWebSocket } from "./CCCWebsocket";
 import type { CCCMessage, CCCClocks, CCCLiveInfo } from "./types";
 import {
@@ -11,8 +11,6 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
-import { StandingsTable } from "./components/StandingsTable";
-import { GameGraph } from "./components/GameGraph";
 import { Schedule } from "./components/Schedule";
 import "./App.css";
 import "./components/Popup.css";
@@ -42,6 +40,9 @@ import { uciToSan } from "./utils";
 import { useLiveInfo } from "./context/LiveInfoContext";
 import { useEventStore } from "./context/EventContext";
 import { EventListWindow } from "./components/EventList/EventList";
+import { GraphWindow } from "./components/GraphWIndow/GraphWindow";
+import { StandingsWindow } from "./components/StandingsWindow/StandingsWindow";
+import { usePopup } from "./components/Popup/PopupContext";
 
 const CLOCK_UPDATE_MS = 100;
 
@@ -54,8 +55,6 @@ Chart.register(
   Tooltip,
   Legend
 );
-
-type PopupStateValues = "crosstable" | "settings" | "none";
 
 const isTCEC = window.location.search.includes("tcec");
 
@@ -89,7 +88,7 @@ function App() {
   const liveInfos = useLiveInfo((state) => state.liveInfos);
   const setLiveInfos = useLiveInfo((state) => state.setLiveInfos);
 
-  const [popupState, setPopupState] = useState<PopupStateValues>("none");
+  const popupState = usePopup((state) => state.popupState);
 
   const [clocks, setClocks] = useState<CCCClocks>({
     binc: "0",
@@ -455,53 +454,6 @@ function App() {
     setLiveInfos("red", red);
   }, [setLiveInfos, getCurrentLiveInfos]);
 
-  const engines = useMemo(() => {
-    // this needed to help typescript correctly infer that
-    // current event is not null without unsafe assertion
-    const event = cccEvent;
-    if (!event?.tournamentDetails?.engines) return [];
-
-    return event.tournamentDetails.engines
-      .map((engine) => {
-        const playedGames = event.tournamentDetails.schedule.past.filter(
-          (game) => game.blackId === engine.id || game.whiteId === engine.id
-        );
-        const points = playedGames.reduce((prev, cur) => {
-          if (cur.blackId === engine.id) {
-            switch (cur.outcome) {
-              case "1-0":
-                return prev + 0.0;
-              case "0-1":
-                return prev + 1.0;
-              case "1/2-1/2":
-                return prev + 0.5;
-              default:
-                return prev;
-            }
-          } else {
-            switch (cur.outcome) {
-              case "0-1":
-                return prev + 0.0;
-              case "1-0":
-                return prev + 1.0;
-              case "1/2-1/2":
-                return prev + 0.5;
-              default:
-                return prev;
-            }
-          }
-        }, 0);
-        const perf = (100 * points) / playedGames.length;
-        return {
-          ...engine,
-          perf: perf.toFixed(1),
-          points: points.toFixed(1),
-          playedGames: playedGames.length.toFixed(1),
-        };
-      })
-      .sort((a, b) => Number(b.perf) - Number(a.perf));
-  }, [cccEvent]);
-
   const pgnHeaders = game.current.getHeaders();
   const termination =
     cccGame?.gameDetails?.termination ??
@@ -513,39 +465,23 @@ function App() {
     setCurrentFen(game.current.fenAt(currentMoveNumber));
   }, [currentMoveNumber, setCurrentFen]);
 
-  const _setPopupState = useCallback(
-    (state: PopupStateValues) => {
-      setPopupState(state);
-    },
-    [setPopupState]
-  );
-
   return (
     <div className="app">
       {popupState !== "none" && (
         <div className="popup">
           {popupState === "crosstable" && cccEvent && (
-            <Crosstable
-              engines={engines}
-              cccEvent={cccEvent}
-              onClose={() => setPopupState("none")}
-              requestEvent={requestEvent}
-            />
+            <Crosstable requestEvent={requestEvent} />
           )}
           {popupState === "settings" && (
             <Settings
               kibitzerSettings={kibitzerSettings}
               setKibitzerSettings={setKibitzerSettings}
-              onClose={() => setPopupState("none")}
             />
           )}
         </div>
       )}
 
-      <EventListWindow
-        requestEvent={requestEvent}
-        setPopupState={_setPopupState}
-      />
+      <EventListWindow requestEvent={requestEvent} />
       <EngineWindow liveInfos={liveInfos} clocks={clocks} fen={currentFEN} />
       <div className="boardWindow">
         <EngineMinimal
@@ -585,44 +521,13 @@ function App() {
           className="borderRadiusBottom"
         />
       </div>
-      <div className="standingsWindow">
-        <h4>Standings</h4>
-        {cccEvent && cccGame ? (
-          <>
-            <button
-              onClick={() => setPopupState("crosstable")}
-              title="View head-to-head results between all engines"
-            >
-              Show Crosstable
-            </button>
-            <StandingsTable engines={engines} />
-          </>
-        ) : (
-          <div className="sectionSpinner">
-            <Spinner />
-          </div>
-        )}
-      </div>
-      <div className="graphWindow">
-        {cccEvent && cccGame ? (
-          <GameGraph />
-        ) : (
-          <>
-            <div className="sectionSpinner">
-              <Spinner />
-            </div>
-          </>
-        )}
-      </div>
+      <StandingsWindow />
+
+      <GraphWindow />
       <div className="scheduleWindow">
         <h4>Schedule</h4>
         {cccEvent && cccGame ? (
-          <Schedule
-            event={cccEvent}
-            engines={engines}
-            requestEvent={requestEvent}
-            selectedGame={cccGame}
-          />
+          <Schedule requestEvent={requestEvent} />
         ) : (
           <div className="sectionSpinner">
             <Spinner />

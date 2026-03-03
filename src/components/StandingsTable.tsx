@@ -1,11 +1,12 @@
 import { memo } from "react";
-import type { CCCEngine } from "../types";
 import { EngineLogo } from "./EngineLogo";
+import { useEventStore } from "../context/EventContext";
+
 import "./StandingsTable.css";
 
-type StandingsTableProps = { engines: CCCEngine[] };
+export const StandingsTable = memo(function () {
+  const engines = useEventStore((state) => state.engines) ?? [];
 
-export const StandingsTable = memo(function ({ engines }: StandingsTableProps) {
   return (
     <div className="standingsWrapper">
       <table className="standings">

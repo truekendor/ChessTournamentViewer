@@ -4,28 +4,34 @@ import type {
   CCCEventUpdate,
   CCCGameUpdate,
   _Nullish,
+  CCCEngine,
 } from "../types";
 
 type EventContext = _Nullish<{
   cccEventList: CCCEventsListUpdate;
   cccEvent: CCCEventUpdate;
   cccGame: CCCGameUpdate;
+  engines: CCCEngine[];
 
   setEventList: (eventList: CCCEventsListUpdate) => void;
   setGame: (game: CCCGameUpdate) => void;
   setEvent: (cccEvent: CCCEventUpdate) => void;
+  updateCCCEngines: () => void;
 }>;
 
-export const useEventStore = create<EventContext>((set) => {
+export const useEventStore = create<EventContext>((set, get) => {
   return {
     cccEvent: null,
     cccGame: null,
     cccEventList: null,
+    engines: [],
 
     setEvent: (cccEvent) => {
       if (cccEvent === null) {
         return;
       }
+
+      let eventUpdated = false;
 
       set((state) => {
         // checks below needed to prevent unnecessary state updates
@@ -34,12 +40,12 @@ export const useEventStore = create<EventContext>((set) => {
         const prevTournamentLen: number =
           state.cccEvent?.tournamentDetails.schedule.past.length || -1;
         const incomingTournamentLen: number =
-          cccEvent.tournamentDetails.schedule.past.length || -2;
+          cccEvent.tournamentDetails.schedule.past.length || -1;
 
         const prevTournamentName: string =
           state.cccEvent?.tournamentDetails.name || "_A";
         const incomingTournamentName: string =
-          cccEvent.tournamentDetails.name || "_B";
+          cccEvent.tournamentDetails.name || "_A";
 
         const tournamentDidUpdate =
           prevTournamentLen !== incomingTournamentLen ||
@@ -49,8 +55,15 @@ export const useEventStore = create<EventContext>((set) => {
           return state;
         }
 
+        eventUpdated = true;
+
         return { cccEvent };
       });
+
+      if (eventUpdated) {
+        // recalculate engine standings as a side effect
+        get().updateCCCEngines(null);
+      }
     },
     setGame: (game) => {
       if (game === null) {
@@ -79,5 +92,61 @@ export const useEventStore = create<EventContext>((set) => {
         return state;
       });
     },
+    updateCCCEngines() {
+      set((state) => {
+        const event = state.cccEvent;
+        if (!event?.tournamentDetails?.engines) {
+          return state;
+        }
+
+        const updatedEngines: CCCEngine[] = calculateNewEngineStandings(event);
+
+        return { engines: updatedEngines };
+      });
+    },
   };
 });
+
+function calculateNewEngineStandings(event: CCCEventUpdate): CCCEngine[] {
+  const updatedEngines = event.tournamentDetails.engines
+    .map((engine) => {
+      const playedGames = event.tournamentDetails.schedule.past.filter(
+        (game) => game.blackId === engine.id || game.whiteId === engine.id
+      );
+      const points = playedGames.reduce((prev, cur) => {
+        if (cur.blackId === engine.id) {
+          switch (cur.outcome) {
+            case "1-0":
+              return prev + 0.0;
+            case "0-1":
+              return prev + 1.0;
+            case "1/2-1/2":
+              return prev + 0.5;
+            default:
+              return prev;
+          }
+        } else {
+          switch (cur.outcome) {
+            case "0-1":
+              return prev + 0.0;
+            case "1-0":
+              return prev + 1.0;
+            case "1/2-1/2":
+              return prev + 0.5;
+            default:
+              return prev;
+          }
+        }
+      }, 0);
+      const perf = (100 * points) / playedGames.length;
+      return {
+        ...engine,
+        perf: perf.toFixed(1),
+        points: points.toFixed(1),
+        playedGames: playedGames.length.toFixed(1),
+      };
+    })
+    .sort((a, b) => Number(b.perf) - Number(a.perf));
+
+  return updatedEngines;
+}
