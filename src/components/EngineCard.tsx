@@ -1,13 +1,14 @@
 import { useMemo, useRef, useCallback, memo, useEffect } from "react";
 import type { CCCEngine, CCCLiveInfo } from "../types";
 import { EngineLogo } from "./EngineLogo";
-import { Board, type BoardHandle } from "../components/Board";
+import { type BoardHandle } from "../components/Board";
 import "./EngineCard.css";
 import { SkeletonBlock, SkeletonText } from "./Loading";
 import { MoveList } from "./MoveList";
 import { buildPvGame, findPvDisagreementPoint, normalizePv } from "../utils";
 import { Chess, Chess960 } from "../chess.js/chess";
 import { useMediaQuery } from "react-responsive";
+import { BoardOld } from "./BoardOld";
 
 type EngineCardProps = {
   info?: CCCLiveInfo;
@@ -165,7 +166,7 @@ const EngineCard = memo(
           />
         ) : moves && !isMobile ? (
           <div className="engineRightSection">
-            <Board ref={boardHandle} animated={false} />
+            <BoardOld ref={boardHandle} animated={false} />
 
             <MoveList
               startFen={safeFen}
