@@ -1,16 +1,10 @@
 import { Line } from "react-chartjs-2";
 import type { CCCLiveInfo } from "../types";
-import { useMemo, useState } from "react";
+import { memo, useState } from "react";
 import "./GameGraph.css";
 import { formatLargeNumber, formatTime } from "./EngineCard";
 import type { PointElement } from "chart.js";
 import { useLiveInfo } from "../context/LiveInfoContext";
-
-type GameGraphProps = {
-  setCurrentMoveNumber: (callback: (previous: number) => number) => void;
-  currentMoveNumber: number;
-  reducedMotion: boolean;
-};
 
 const COLORS = {
   white: "rgba(255, 255, 255, 0.7)",
@@ -136,28 +130,24 @@ const MODES = [
   },
 ];
 
-export function GameGraph({
-  setCurrentMoveNumber,
-  currentMoveNumber,
-  reducedMotion,
-}: GameGraphProps) {
+export const GameGraph = memo(() => {
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
   const liveInfosObj = useLiveInfo((state) => state.liveEngineData);
 
-  const liveInfos = useMemo(
-    () => ({
-      white: liveInfosObj.white.liveInfo,
-      black: liveInfosObj.black.liveInfo,
-      green: liveInfosObj.green.liveInfo,
-      red: liveInfosObj.red.liveInfo,
-      blue: liveInfosObj.blue.liveInfo,
-    }),
-    [
-      liveInfosObj.black.liveInfo,
-      liveInfosObj.blue.liveInfo,
-      liveInfosObj.green.liveInfo,
-      liveInfosObj.red.liveInfo,
-      liveInfosObj.white.liveInfo,
-    ]
+  const liveInfos = {
+    white: liveInfosObj.white.liveInfo,
+    black: liveInfosObj.black.liveInfo,
+    green: liveInfosObj.green.liveInfo,
+    red: liveInfosObj.red.liveInfo,
+    blue: liveInfosObj.blue.liveInfo,
+  };
+
+  const currentMoveNumber = useLiveInfo((state) => state.currentMoveNumber);
+  const setCurrentMoveNumber = useLiveInfo(
+    (state) => state.setCurrentMoveNumber
   );
 
   const [mode, setMode] = useState(0);
@@ -248,7 +238,9 @@ export function GameGraph({
               },
             },
             onClick: (_, elements) => {
-              setCurrentMoveNumber(() => elements[0].index + bookPlies);
+              if (elements[0]?.index) {
+                setCurrentMoveNumber(elements[0].index + bookPlies);
+              }
             },
             scales: {
               y: {
@@ -313,4 +305,4 @@ export function GameGraph({
       </div>
     </div>
   );
-}
+});

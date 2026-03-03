@@ -8,8 +8,7 @@ import {
   type LiveEngineDataEntryObject,
   type LiveEngineDataObject,
 } from "../LiveInfo";
-
-type MoveNumberInfo = { current: number; prev: number };
+import { Chess } from "../chess.js/chess";
 
 type LiveInfoData = {
   liveInfos: LiveEngineDataEntry;
@@ -24,8 +23,11 @@ type LiveInfoData = {
     data: Partial<LiveEngineDataObject>
   ) => void;
 
-  moveNumberInfo: MoveNumberInfo;
-  setCurrentMoveNumber: (data: Partial<MoveNumberInfo>) => void;
+  currentMoveNumber: number;
+  setCurrentMoveNumber: (data: number) => void;
+
+  currentFen: string;
+  setCurrentFen: (fen: string) => void;
 };
 
 export const useLiveInfo = create<LiveInfoData>()(
@@ -44,12 +46,22 @@ export const useLiveInfo = create<LiveInfoData>()(
       green: { engineInfo: EmptyEngineDefinition, liveInfo: undefined },
       red: { engineInfo: EmptyEngineDefinition, liveInfo: undefined },
     },
-    moveNumberInfo: { current: -1, prev: -1 },
+
+    // probably should create another context for the game with
+    // chess.js game and fen + move info and whatever game-related data?
+    currentMoveNumber: -1,
+    currentFen: new Chess().fen(),
+
+    setCurrentFen(fen) {
+      set({ currentFen: fen });
+    },
     setCurrentMoveNumber(data) {
       set((state) => {
-        state.moveNumberInfo = { ...state.moveNumberInfo, ...data };
+        state.currentMoveNumber = data;
       });
     },
+    // ================
+
     setLiveEngineData(color, data) {
       set((state) => {
         state.liveEngineData[color] = {

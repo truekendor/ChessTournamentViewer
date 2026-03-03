@@ -13,14 +13,13 @@ import {
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
+import { useLiveInfo } from "../context/LiveInfoContext";
 
 type MoveListProps = {
   startFen: string;
   moves: string[];
   downloadURL?: string;
-  currentMoveNumber: number;
   moveNumberOffset?: number;
-  setCurrentMoveNumber: (callback: (previous: number) => number) => void;
   controllers: boolean;
   disagreementMoveIndex?: number;
 };
@@ -63,8 +62,6 @@ const MoveList = memo(
   ({
     startFen,
     moves,
-    currentMoveNumber,
-    setCurrentMoveNumber,
     downloadURL,
     controllers,
     disagreementMoveIndex,
@@ -74,6 +71,11 @@ const MoveList = memo(
 
     const blackMovesFirst = startFen?.split(" ")[1] === "b";
     const pairStart = blackMovesFirst ? 1 : 0;
+
+    const currentMoveNumber = useLiveInfo((state) => state.currentMoveNumber);
+    const setCurrentMoveNumber = useLiveInfo(
+      (state) => state.setCurrentMoveNumber
+    );
 
     useEffect(() => {
       if (controllers) {
@@ -109,7 +111,7 @@ const MoveList = memo(
     }, [currentMoveNumber, moves.length]);
 
     function undoAllMoves() {
-      setCurrentMoveNumber(() => 0);
+      setCurrentMoveNumber(0);
       const el = moveListRef.current;
       if (el) {
         requestAnimationFrame(() => {
@@ -118,7 +120,7 @@ const MoveList = memo(
       }
     }
     function redoAllMoves() {
-      setCurrentMoveNumber(() => -1);
+      setCurrentMoveNumber(-1);
       const el = moveListRef.current;
       if (el) {
         requestAnimationFrame(() => {
@@ -127,22 +129,22 @@ const MoveList = memo(
       }
     }
     function undoMove() {
-      if (currentMoveNumber === 0) return;
-
-      setCurrentMoveNumber((previous) => {
-        if (previous === 0) return previous;
-        if (previous === -1) return moves.length - 1;
-        return previous - 1;
-      });
+      if (currentMoveNumber === 0) {
+        return;
+      } else if (currentMoveNumber === -1) {
+        setCurrentMoveNumber(moves.length - 1);
+      } else {
+        setCurrentMoveNumber(currentMoveNumber - 1);
+      }
     }
     function redoMove() {
-      if (currentMoveNumber === -1) return;
-
-      setCurrentMoveNumber((previous) => {
-        if (previous === -1) return previous;
-        if (previous + 1 >= moves.length) return -1;
-        return previous + 1;
-      });
+      if (currentMoveNumber === -1) {
+        return;
+      } else if (currentMoveNumber + 1 >= moves.length) {
+        setCurrentMoveNumber(-1);
+      } else {
+        setCurrentMoveNumber(currentMoveNumber + 1);
+      }
     }
 
     function copyFen() {
@@ -192,7 +194,6 @@ const MoveList = memo(
           rowActive={whiteActive}
           disagreementWhite={disagreementMoveIndex === i}
           disagreementBlack={disagreementMoveIndex === i + 1}
-          setCurrentMoveNumber={setCurrentMoveNumber}
         />
       );
     }
@@ -224,7 +225,7 @@ const MoveList = memo(
                             active,
                             disagreementMoveIndex === 0
                           )}
-                          onClick={() => setCurrentMoveNumber(() => 1)}
+                          onClick={() => setCurrentMoveNumber(1)}
                         >
                           {moves[0]}
                         </span>
@@ -319,7 +320,6 @@ type MoveRowProps = {
   rowActive: boolean;
   disagreementWhite: boolean;
   disagreementBlack: boolean;
-  setCurrentMoveNumber: (callback: (n: number) => number) => void;
 };
 
 const MoveRow = memo(
@@ -333,19 +333,22 @@ const MoveRow = memo(
     rowActive,
     disagreementWhite,
     disagreementBlack,
-    setCurrentMoveNumber,
   }: MoveRowProps) => {
+    const setCurrentMoveNumber = useLiveInfo(
+      (state) => state.setCurrentMoveNumber
+    );
+
     return (
       <tr>
         <th
           className={"move right" + (rowActive ? " currentMove" : "")}
-          onClick={() => setCurrentMoveNumber(() => moveIndex + 1)}
+          onClick={() => setCurrentMoveNumber(moveIndex + 1)}
         >
           {moveNumber}.
         </th>
         <td
           className={moveClass(whiteActive, disagreementWhite)}
-          onClick={() => setCurrentMoveNumber(() => moveIndex + 1)}
+          onClick={() => setCurrentMoveNumber(moveIndex + 1)}
         >
           {whiteMove}
         </td>
@@ -353,7 +356,7 @@ const MoveRow = memo(
           {blackMove && (
             <span
               className={moveClass(blackActive, disagreementBlack)}
-              onClick={() => setCurrentMoveNumber(() => moveIndex + 2)}
+              onClick={() => setCurrentMoveNumber(moveIndex + 2)}
             >
               {blackMove}
             </span>

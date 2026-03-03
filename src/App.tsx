@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CCCWebSocket, type TournamentWebSocket } from "./CCCWebsocket";
-import type {
-  CCCMessage,
-  CCCEventUpdate,
-  CCCEventsListUpdate,
-  CCCClocks,
-  CCCGameUpdate,
-  CCCLiveInfo,
-} from "./types";
+import type { CCCMessage, CCCClocks, CCCLiveInfo } from "./types";
 import {
   CategoryScale,
   Chart,
@@ -73,7 +66,6 @@ function App() {
   const ws = useRef<TournamentWebSocket>(_initialWS);
 
   const kibitzer = useRef<EngineWorker[]>(null);
-  const [fen, setFen] = useState(game.current.fen());
   const [moves, setMoves] = useState<string[]>([]);
 
   const cccEvent = useEventStore((state) => state.cccEvent);
@@ -84,8 +76,18 @@ function App() {
   const setGame = useEventStore((state) => state.setGame);
   const setEventList = useEventStore((state) => state.setEventList);
 
+  const currentMoveNumber = useLiveInfo((state) => state.currentMoveNumber);
+  const setCurrentMoveNumber = useLiveInfo(
+    (state) => state.setCurrentMoveNumber
+  );
+
+  const currentFEN = useLiveInfo((state) => state.currentFen);
+  const setCurrentFen = useLiveInfo((state) => state.setCurrentFen);
+
   const liveEngineData = useLiveInfo((state) => state.liveEngineData);
   const setLiveEngineData = useLiveInfo((state) => state.setLiveEngineData);
+  const liveInfos = useLiveInfo((state) => state.liveInfos);
+  const setLiveInfos = useLiveInfo((state) => state.setLiveInfos);
 
   const [popupState, setPopupState] = useState<string>();
 
@@ -100,17 +102,10 @@ function App() {
   const [kibitzerSettings, setKibitzerSettings] = useState<EngineSettings>(
     getDefaultKibitzerSettings()
   );
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)"
-  ).matches;
-
-  const currentMoveNumber = useRef(-1);
 
   const getCurrentLiveInfos = useCallback(() => {
     const moveNumber =
-      currentMoveNumber.current === game.current.length()
-        ? -1
-        : currentMoveNumber.current;
+      currentMoveNumber === game.current.length() ? -1 : currentMoveNumber;
 
     const index = moveNumber === -1 ? game.current.length() - 2 : moveNumber;
     const turn = game.current.turnAt(index);
@@ -152,18 +147,18 @@ function App() {
         blue: kibitzer(black, "blue"),
       };
     }
-  }, [liveEngineData]);
+  }, [currentMoveNumber, liveEngineData]);
 
   const updateBoard = useCallback(
     (bypassRateLimit: boolean = false) => {
       boardHandle.current?.updateBoard(
         game.current,
-        currentMoveNumber.current,
+        currentMoveNumber,
         getCurrentLiveInfos(),
         bypassRateLimit
       );
     },
-    [getCurrentLiveInfos]
+    [currentMoveNumber, getCurrentLiveInfos]
   );
 
   function updateClocks() {
@@ -259,12 +254,12 @@ function App() {
             liveInfo: [],
           });
 
-          currentMoveNumber.current = -1;
+          setCurrentMoveNumber(-1);
 
           updateBoard();
 
           setGame(msg);
-          setFen(game.current.fen());
+          setCurrentFen(game.current.fen());
           setMoves(game.current.history());
 
           break;
@@ -290,8 +285,8 @@ function App() {
           const to = msg.move.slice(2, 4) as Square;
           const promo = msg.move?.[4];
 
-          game.current.move({ from, to, promotion: promo as any });
-          setFen(game.current.fen());
+          game.current.move({ from, to, promotion: promo });
+          setCurrentFen(game.current.fen());
           setMoves(game.current.history());
           updateBoard(true);
 
@@ -314,6 +309,8 @@ function App() {
     [
       cccEvent,
       handleLiveInfo,
+      setCurrentFen,
+      setCurrentMoveNumber,
       setEvent,
       setEventList,
       setGame,
@@ -329,14 +326,6 @@ function App() {
 
     ws.current.send(message);
   }, []);
-
-  const setCurrentMoveNumber = useCallback(
-    (callback: (previous: number) => number) => {
-      currentMoveNumber.current = callback(currentMoveNumber.current);
-      updateBoard(true);
-    },
-    [updateBoard]
-  );
 
   useEffect(() => {
     const wsInstance = ws.current;
@@ -426,17 +415,24 @@ function App() {
   useEffect(() => {
     if (!cccGame?.gameDetails.live || !kibitzerSettings.enableKibitzer) return;
 
-    activeKibitzer?.analyze(fen);
+    activeKibitzer?.analyze(currentFEN);
   }, [
-    fen,
     _kibitzerId,
     cccGame?.gameDetails.gameNr,
     kibitzerSettings.enableKibitzer,
     cccGame?.gameDetails.live,
     activeKibitzer,
+    currentFEN,
   ]);
 
-  const liveInfos = getCurrentLiveInfos();
+  useEffect(() => {
+    const { white, black, blue, green, red } = getCurrentLiveInfos();
+    setLiveInfos("white", white);
+    setLiveInfos("black", black);
+    setLiveInfos("blue", blue);
+    setLiveInfos("green", green);
+    setLiveInfos("red", red);
+  }, [setLiveInfos, getCurrentLiveInfos]);
 
   const engines = useMemo(() => {
     // this needed to help typescript correctly infer that
@@ -492,7 +488,9 @@ function App() {
     pgnHeaders["TerminationDetails"];
   const result = pgnHeaders["Result"];
 
-  const currentFen = game.current.fenAt(currentMoveNumber.current);
+  useEffect(() => {
+    setCurrentFen(game.current.fenAt(currentMoveNumber));
+  }, [currentMoveNumber, setCurrentFen]);
 
   return (
     <div className="app">
@@ -515,7 +513,6 @@ function App() {
           )}
         </div>
       )}
-
       <div className="topBar">
         <div className="currentEvent">
           Chess Tournament Viewer
@@ -534,9 +531,7 @@ function App() {
           </button>
         </div>
       </div>
-
-      <EngineWindow liveInfos={liveInfos} clocks={clocks} fen={currentFen} />
-
+      <EngineWindow liveInfos={liveInfos} clocks={clocks} fen={currentFEN} />
       <div className="boardWindow">
         <EngineMinimal
           info={liveInfos.black.liveInfo}
@@ -551,8 +546,8 @@ function App() {
           {termination &&
             result &&
             result !== "*" &&
-            (currentMoveNumber.current === -1 ||
-              currentMoveNumber.current === game.current.length()) && (
+            (currentMoveNumber === -1 ||
+              currentMoveNumber === game.current.length()) && (
               <GameResultOverlay result={result} termination={termination} />
             )}
         </div>
@@ -560,8 +555,6 @@ function App() {
         <MoveList
           startFen={game.current.getHeaders()["FEN"] ?? new Chess().fen()}
           moves={moves}
-          currentMoveNumber={currentMoveNumber.current}
-          setCurrentMoveNumber={setCurrentMoveNumber}
           downloadURL={
             termination && result && result !== "*"
               ? `https://storage.googleapis.com/chess-1-prod-ccc/gamelogs/game-${cccGame?.gameDetails.gameNr}.log`
@@ -577,7 +570,6 @@ function App() {
           className="borderRadiusBottom"
         />
       </div>
-
       <div className="standingsWindow">
         <h4>Standings</h4>
         {cccEvent && cccGame ? (
@@ -596,14 +588,9 @@ function App() {
           </div>
         )}
       </div>
-
       <div className="graphWindow">
         {cccEvent && cccGame ? (
-          <GameGraph
-            setCurrentMoveNumber={setCurrentMoveNumber}
-            currentMoveNumber={currentMoveNumber.current}
-            reducedMotion={prefersReducedMotion}
-          />
+          <GameGraph />
         ) : (
           <>
             <div className="sectionSpinner">
@@ -612,7 +599,6 @@ function App() {
           </>
         )}
       </div>
-
       <div className="scheduleWindow">
         <h4>Schedule</h4>
         {cccEvent && cccGame ? (
