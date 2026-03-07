@@ -1,8 +1,19 @@
+export type WebsocketRegisteredSubIds =
+  | "main"
+  | "useKibitzerHook"
+  | "useClockHook"
+  | "scheduleWindow";
+
+export type WSSubCallback = (msg: CCCMessage) => void;
+
 import type { CCCMessage } from "./types";
 
 export interface TournamentWebSocket {
-  connect: (onMessage: (message: CCCMessage) => void) => void;
-  setHandler: (onMessage: (message: CCCMessage) => void) => void;
+  connect: (onMessage: WSSubCallback, subId: WebsocketRegisteredSubIds) => void;
+  setHandler: (
+    onMessage: WSSubCallback,
+    subId: WebsocketRegisteredSubIds
+  ) => void;
 
   isConnected: () => boolean;
 
@@ -15,19 +26,43 @@ export class CCCWebSocket implements TournamentWebSocket {
   private url: string = "wss://ccc-api.gcp-prod.chess.com/ws";
   socket: WebSocket | null = new WebSocket(this.url);
 
-  private cb: (message: CCCMessage) => void = () => {};
+  private socketSubs: Map<WebsocketRegisteredSubIds, WSSubCallback> = new Map();
 
-  connect(onMessage: (message: CCCMessage) => void) {
-    if (this.socket !== null) {
+  connect(onMessage: WSSubCallback, id: WebsocketRegisteredSubIds) {
+    if (this.socket === null) {
+      this.socket = new WebSocket(this.url);
+    }
+
+    this.setHandler(onMessage, id);
+  }
+
+  isConnected() {
+    return (
+      !!this.socket &&
+      this.socket.readyState !== this.socket.CLOSING &&
+      this.socket.readyState !== this.socket.CLOSED &&
+      this.socket.readyState !== undefined
+    );
+  }
+
+  setHandler(onMessage: WSSubCallback, id: WebsocketRegisteredSubIds) {
+    if (this.socket === null) {
       return;
     }
 
-    this.cb = onMessage;
-    this.socket = new WebSocket(this.url);
+    this.socketSubs.set(id, onMessage);
 
     this.socket.onopen = () => {
       this.send({ type: "requestEvent" });
       this.send({ type: "requestEventsListUpdate" });
+    };
+
+    this.socket.onclose = () => {
+      this.socket = null;
+    };
+
+    this.socket.onerror = () => {
+      // this.ws?.close();
     };
 
     this.socket.onmessage = (e) => {
@@ -38,59 +73,10 @@ export class CCCWebSocket implements TournamentWebSocket {
           msg.tournamentDetails.isRoundRobin = true;
         }
 
-        this.cb(msg);
+        this.socketSubs.forEach((callback) => {
+          callback(msg);
+        });
       }
-    };
-
-    this.socket.onclose = () => {
-      this.socket = null;
-    };
-
-    this.socket.onerror = () => {
-      // this.ws?.close();
-      console.log("on error");
-    };
-  }
-
-  isConnected() {
-    return !!this.socket && this.socket.readyState !== this.socket.CLOSING && this.socket.readyState !== this.socket.CLOSED && this.socket.readyState !== undefined;
-  }
-
-  setHandler(onMessage: (message: CCCMessage) => void) {
-    this.cb = onMessage;
-
-    if (this.socket === null) {
-      console.log(`
-          _DEV delete this log later
-          should never reach this clause
-      `);
-      return;
-    }
-
-    this.socket.onopen = () => {
-      this.send({ type: "requestEvent" });
-      this.send({ type: "requestEventsListUpdate" });
-    };
-
-    this.socket.onmessage = (e) => {
-      const messages = JSON.parse(e.data) as CCCMessage[];
-      for (const msg of messages) {
-        this.cb(msg);
-      }
-    };
-
-    this.socket.onclose = () => {
-      this.socket = null;
-    };
-
-    this.socket.onerror = () => {
-      // this.ws?.close();
-      console.log("on eerror");
-    };
-
-    this.socket.onmessage = (e) => {
-      const messages = JSON.parse(e.data) as CCCMessage[];
-      for (const msg of messages) this.cb(msg);
     };
   }
 
