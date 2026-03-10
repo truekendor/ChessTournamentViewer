@@ -32,7 +32,6 @@ export const BoardWindow = memo(() => {
   useKibitzer({ updateBoard });
 
   const cccEvent = useEventStore((state) => state.cccEvent);
-  const cccGame = useEventStore((state) => state.cccGame);
   const game = useLiveInfo((state) => state.game);
 
   useEffect(() => {
@@ -183,22 +182,13 @@ export const BoardWindow = memo(() => {
     useEventStore.getState().setRequestEvent(requestEvent);
   }, []);
 
-  const pgnHeaders = game.getHeaders();
-  const termination =
-    cccGame?.gameDetails?.termination ??
-    pgnHeaders["Termination"] ??
-    pgnHeaders["TerminationDetails"];
-  const result = pgnHeaders["Result"];
-
   return (
     <div className="boardWindow">
       <EngineMinimal color="black" className="borderRadiusTop" />
       <div className="boardWrapper">
         {Board}
 
-        {termination && result && result !== "*" && (
-          <GameResultOverlay result={result} termination={termination} />
-        )}
+        <GameResultOverlay />
       </div>
 
       <LiveMoveList />
