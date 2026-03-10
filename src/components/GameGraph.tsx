@@ -247,6 +247,7 @@ export function GameGraph({
               },
             },
             onClick: (_, elements) => {
+              if (!elements || !elements[0]) return;
               setCurrentMoveNumber(() => elements[0].index + bookPlies);
             },
             scales: {
