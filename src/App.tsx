@@ -329,6 +329,7 @@ function App() {
           liveInfosRef.current.green.engineInfo =
             activeKibitzer.getEngineInfo();
 
+          result.liveInfo.info.ply = result.gameIndex;
           const newLiveInfos = [...liveInfosRef.current.green.liveInfo];
           newLiveInfos[result.liveInfo.info.ply] = result.liveInfo;
           liveInfosRef.current.green.liveInfo = newLiveInfos;
@@ -349,7 +350,7 @@ function App() {
   useEffect(() => {
     if (!cccGame?.gameDetails.live || !kibitzerSettings.enableKibitzer) return;
 
-    activeKibitzer?.analyze(fen);
+    activeKibitzer?.analyze({ fen, gameIndex: game.current.length() });
   }, [
     fen,
     activeKibitzer?.getID(),
