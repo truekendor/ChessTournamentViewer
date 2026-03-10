@@ -14,8 +14,14 @@ export interface IEngineWorker {
   terminate(): void;
 }
 
+export type AnalysisRequest = {
+  fen: string;
+  gameIndex: number;
+}
+
 export type AnalysisResult = {
   fen: string;
+  gameIndex: number;
   liveInfo: CCCLiveInfo;
   arrow: DrawShape | null;
 };
@@ -33,7 +39,7 @@ export class EngineWorker {
 
   public terminated: boolean = false;
   public isSearching: boolean = false;
-  public activeFen: string | null = null;
+  public activeAnalysis: AnalysisRequest | null = null;
   public latestRequestedFen: string | null = null;
 
   private queue: Promise<void> = Promise.resolve();
@@ -72,14 +78,14 @@ export class EngineWorker {
     await this.waitForStop();
   }
 
-  public analyze(fen: string) {
+  public analyze(fen: AnalysisRequest) {
     if (!this.worker.isReady() || this.terminated) return;
 
-    this.latestRequestedFen = fen;
+    this.latestRequestedFen = fen.fen;
 
     this.queue = this.queue
       .then(async () => {
-        if (this.latestRequestedFen !== fen) {
+        if (this.latestRequestedFen !== fen.fen) {
           return;
         }
         await this.performAnalysis(fen);
@@ -89,14 +95,14 @@ export class EngineWorker {
       });
   }
 
-  private async performAnalysis(fen: string) {
+  private async performAnalysis(request: AnalysisRequest) {
     if (this.isSearching) {
       this.post("stop");
       await this.waitForStop();
     }
 
-    this.activeFen = fen;
-    this.post(`position fen ${fen}`);
+    this.activeAnalysis = request;
+    this.post(`position fen ${request.fen}`);
     this.post("go infinite");
     this.isSearching = true;
   }
@@ -123,16 +129,17 @@ export class EngineWorker {
       msg.startsWith("info depth") &&
       !msg.includes("currmove") &&
       this.onMessage &&
-      this.activeFen
+      this.activeAnalysis
     ) {
       const parsed = extractLiveInfoFromInfoString(
         msg,
-        this.activeFen,
+        this.activeAnalysis.fen,
         "green"
       );
       if (parsed) {
         this.onMessage({
-          fen: this.activeFen,
+          fen: this.activeAnalysis.fen,
+          gameIndex: this.activeAnalysis.gameIndex,
           liveInfo: parsed.liveInfo,
           arrow: parsed.arrow,
         });

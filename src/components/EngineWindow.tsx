@@ -78,7 +78,7 @@ export function EngineWindow() {
             <tr>
               {firstColumn && <th className="engineFieldKey"></th>}
               {headerEngines.map((color) => (
-                <th>
+                <th key={color}>
                   <span className="engineHeader">
                     <EngineLogo
                       engine={liveInfos[color].engineInfo}

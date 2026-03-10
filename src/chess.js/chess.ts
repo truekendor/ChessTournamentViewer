@@ -1760,6 +1760,21 @@ export class Chess {
           break
         }
       }
+
+      if (!moveObj) {
+        for (let i = 0, len = moves.length; i < len; i++) {
+          if (move.from === algebraic(moves[i].from) && moves[i].piece === "k" && moves[i].rookFrom && moves[i].rookTo) {
+            const to = Ox88[move.to as Square];
+
+            if (file(to) < file(moves[i].from)) {
+              return this.move("O-O-O");
+            } else {
+              return this.move("O-O");
+            }
+          }
+        }
+      }
+
     }
 
     // failed to find move

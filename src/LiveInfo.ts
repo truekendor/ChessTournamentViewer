@@ -212,29 +212,31 @@ export function extractLiveInfoFromGame(game: Chess960) {
   if (game.getHeaders()["Site"]?.includes("tcec"))
     return extractLiveInfoFromTCECGame(game);
 
+  const startingFen = game.getHeaders()["FEN"] ?? "";
+
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];
   game.getComments().forEach((value, i, allValues) => {
     const data = value.comment?.split(", ") ?? [];
 
     if (data[0] === "book") return;
+    
+    const fenBeforeMove = allValues[i - 1]?.fen ?? startingFen;
+    const color = fenBeforeMove.includes(" w ") ? "white" : "black";
 
     let score = data[0].split("/")[0];
-    if (i % 2 === 1) {
+    if (color === "black") {
       if (score.includes("+")) score = score.replace("+", "-");
       else score = score.replace("-", "+");
     }
 
     const pvString = data[8].replace("pv=", "").replaceAll('"', "");
-    const sanPv = uciToSan(
-      allValues[i - 1].fen ?? "",
-      pvString.split(" ")
-    ).join(" ");
+    const sanPv = uciToSan(fenBeforeMove, pvString.split(" ")).join(" ");
 
     const liveInfo: CCCLiveInfo = {
       type: "liveInfo",
       info: {
-        color: i % 2 === 0 ? "white" : "black",
+        color,
         depth: data[0].split("/")[1].split(" ")[0],
         multipv: "1",
         hashfull: data[6].split("=")[1],
@@ -250,7 +252,8 @@ export function extractLiveInfoFromGame(game: Chess960) {
         time: data[0].split(" ")[1].split("s")[0].replace(".", ""),
       },
     };
-    if (i % 2 === 0) liveInfosWhite[liveInfo.info.ply] = liveInfo;
+
+    if (color === "white") liveInfosWhite[liveInfo.info.ply] = liveInfo;
     else liveInfosBlack[liveInfo.info.ply] = liveInfo;
   });
 

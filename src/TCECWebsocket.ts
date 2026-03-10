@@ -147,7 +147,9 @@ export class TCECWebSocket implements TournamentWebSocket {
         // Make the move
         const move = this.game
           .moves({ verbose: true })
-          .find((move) => move.san === moveData.m)!;
+          .find((move) => move.san === moveData.m);
+        
+        if (!move) break;
 
         this.game.move(move.san, { strict: false });
 

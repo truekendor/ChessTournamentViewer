@@ -288,6 +288,7 @@ function App() {
           if (game.getHeaders()["Event"] === "?") return;
           if (game.fen() != result.fen) return;
 
+          result.liveInfo.info.ply = result.gameIndex;
           updateLiveEngineData("green", result.liveInfo);
           setLiveEngineData("green", {
             engineInfo: activeKibitzer.getEngineInfo(),
@@ -317,7 +318,7 @@ function App() {
   useEffect(() => {
     if (!cccGame?.gameDetails.live || !kibitzerSettings.enableKibitzer) return;
 
-    activeKibitzer?.analyze(currentFen);
+    activeKibitzer?.analyze({ fen: currentFen, gameIndex: game.length() });
   }, [
     _kibitzerId,
     cccGame?.gameDetails.gameNr,
