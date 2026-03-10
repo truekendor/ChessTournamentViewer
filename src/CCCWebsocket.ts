@@ -1,4 +1,4 @@
-import type { CCCMessage } from "./types";
+import type { CCCLiveInfo, CCCMessage } from "./types";
 
 export interface TournamentWebSocket {
   connect: (onMessage: (message: CCCMessage) => void) => void;
@@ -31,7 +31,21 @@ export class CCCWebSocket implements TournamentWebSocket {
 
     this.socket.onmessage = (e) => {
       const messages = JSON.parse(e.data) as CCCMessage[];
-      for (const msg of messages) {
+
+      const lastLiveInfoIdx = messages.findLastIndex(
+        (message) => message.type === "liveInfo"
+      );
+      // If there are multiple liveInfos for the same ply, ignore all but the last one
+      const filteredMessages = messages.filter(
+        (message, idx) =>
+          lastLiveInfoIdx === -1 ||
+          message.type !== "liveInfo" ||
+          message.info.ply !==
+            (messages[lastLiveInfoIdx] as CCCLiveInfo).info.ply ||
+          idx === lastLiveInfoIdx
+      );
+
+      for (const msg of filteredMessages) {
         if (msg.type === "eventUpdate") {
           msg.tournamentDetails.hasGamePairs = true;
           msg.tournamentDetails.isRoundRobin = true;
@@ -52,7 +66,12 @@ export class CCCWebSocket implements TournamentWebSocket {
   }
 
   isConnected() {
-    return !!this.socket && this.socket.readyState !== this.socket.CLOSING && this.socket.readyState !== this.socket.CLOSED && this.socket.readyState !== undefined;
+    return (
+      !!this.socket &&
+      this.socket.readyState !== this.socket.CLOSING &&
+      this.socket.readyState !== this.socket.CLOSED &&
+      this.socket.readyState !== undefined
+    );
   }
 
   setHandler(onMessage: (message: CCCMessage) => void) {
