@@ -28,22 +28,23 @@ function calcSanMovesForBatch(batch: BatchTaskEntry[]): BatchTaskEntry[] {
 }
 
 export const useSANMovesBatching = () => {
-  // raw collection on tasks
+  // Raw collection of all unprocessed tasks (acts as the input queue)
   const taskStack = useRef<BatchTaskEntry[]>([]);
-  // collection of task-lists with a length of a batch size
-  const butchList = useRef<BatchTaskEntry[][]>([]);
+  // Tasks partitioned into chunks of BATCH_SIZE for actual processing
+  // Each inner array represents one batch of tasks to be processed together
+  const batchList = useRef<BatchTaskEntry[][]>([]);
 
   const patchLiveEngineData = useLiveInfo((state) => state.patchLiveEngineData);
 
   const mainTimerHandler = useRef<number>(-1);
-  const butchTaskTimerHandler = useRef<number>(-1);
+  const batchTaskTimerHandler = useRef<number>(-1);
 
   const butchTimeout = useCallback(async () => {
-    for (let i = 0; i < butchList.current.length; i++) {
-      const cur = butchList.current[i];
+    for (let i = 0; i < batchList.current.length; i++) {
+      const cur = batchList.current[i];
 
       await new Promise((res) => {
-        butchTaskTimerHandler.current = setTimeout(() => {
+        batchTaskTimerHandler.current = setTimeout(() => {
           const tasks = calcSanMovesForBatch(cur);
           patchLiveEngineData(tasks);
 
@@ -55,7 +56,7 @@ export const useSANMovesBatching = () => {
 
   const calcRest = useCallback(
     async function () {
-      const batchList: BatchTaskEntry[] = [];
+      const batchTemp: BatchTaskEntry[] = [];
       const copy = taskStack.current;
 
       while (copy.length > 0) {
@@ -64,19 +65,19 @@ export const useSANMovesBatching = () => {
         // this should never fire but you never know
         // with the async stuff
         if (val === undefined) {
-          butchList.current.push([...batchList]);
-          batchList.length = 0;
+          batchList.current.push([...batchTemp]);
+          batchTemp.length = 0;
           break;
         }
 
-        batchList.push(val);
+        batchTemp.push(val);
 
-        const reachedBatchSize = batchList.length >= BATCH_SIZE;
+        const reachedBatchSize = batchTemp.length >= BATCH_SIZE;
         const noTasksLeft = copy.length === 0;
 
         if (reachedBatchSize || noTasksLeft) {
-          butchList.current.push([...batchList]);
-          batchList.length = 0;
+          batchList.current.push([...batchTemp]);
+          batchTemp.length = 0;
         }
       }
 
@@ -96,12 +97,12 @@ export const useSANMovesBatching = () => {
       if (mainTimerHandler.current) {
         clearTimeout(mainTimerHandler.current);
       }
-      if (butchTaskTimerHandler.current) {
-        clearTimeout(butchTaskTimerHandler.current);
+      if (batchTaskTimerHandler.current) {
+        clearTimeout(batchTaskTimerHandler.current);
       }
 
       taskStack.current.length = 0;
-      butchList.current.length = 0;
+      batchList.current.length = 0;
 
       const startingFen = game.getHeaders()["FEN"] ?? "";
 
