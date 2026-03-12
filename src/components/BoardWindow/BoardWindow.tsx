@@ -17,6 +17,7 @@ import { EngineMinimal } from "../EngineMinimal";
 import { GameResultOverlay } from "../GameResultOverlay";
 import { useKibitzer } from "../../hooks/useKibitzer";
 import { LiveMoveList } from "../LiveMoveList";
+import { useSANMovesBatching } from "../../hooks/useSANMovesBatching";
 
 const isTCEC = window.location.search.includes("tcec");
 const _initialWS = isTCEC ? new TCECWebSocket() : new CCCWebSocket();
@@ -33,6 +34,7 @@ export const BoardWindow = memo(() => {
 
   const cccEvent = useEventStore((state) => state.cccEvent);
   const game = useLiveInfo((state) => state.game);
+  const { __extractLiveInfoFromGame } = useSANMovesBatching();
 
   const handleLiveInfo = useCallback(
     (msg: CCCLiveInfo) => {
@@ -74,9 +76,20 @@ export const BoardWindow = memo(() => {
             liveInfo: [],
           });
 
+          // todo delete later
+          const t1 = performance.now();
+
           // Load white + black engine live info
+          // const { liveInfosBlack, liveInfosWhite } =
+          //   extractLiveInfoFromGame(game);
+
           const { liveInfosBlack, liveInfosWhite } =
-            extractLiveInfoFromGame(game);
+            __extractLiveInfoFromGame(game);
+
+          const t2 = performance.now();
+
+          console.log(`time: ${t2 - t1} sec`);
+
           const engines = eventState.cccEvent?.tournamentDetails.engines ?? [];
           const wEngine =
             engines.find(
@@ -147,7 +160,7 @@ export const BoardWindow = memo(() => {
           break;
       }
     },
-    [cccEvent, game, handleLiveInfo, updateBoard]
+    [__extractLiveInfoFromGame, cccEvent, game, handleLiveInfo, updateBoard]
   );
 
   useEffect(() => {
