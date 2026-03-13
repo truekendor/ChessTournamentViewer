@@ -52,13 +52,39 @@ export const BoardWindow = memo(() => {
       const eventState = useEventStore.getState();
 
       switch (msg.type) {
-        case "eventUpdate":
+        case "eventUpdate": {
           eventState.setEvent(msg);
+
+          if (!isTCEC) {
+            eventState.setTimeControl({
+              // init time control in a minutes format but seconds required
+              main: msg.tournamentDetails.tc.init * 60,
+              added: msg.tournamentDetails.tc.incr,
+            });
+          }
           break;
+        }
 
         case "gameUpdate": {
           game.loadPgn(msg.gameDetails.pgn);
           liveInfoState.setCurrentMoveNumber(() => -1);
+
+          if (isTCEC) {
+            /**
+             * time control sting in a format of `{time_main_sec}+{time_inc_sec}`
+             */
+            const tc: string = game.getHeaders()["TimeControl"];
+
+            const mainTimeSec = tc.split("+")[0];
+            const addedTimeSec = tc.split("+")[1];
+
+            if (mainTimeSec && addedTimeSec) {
+              eventState.setTimeControl({
+                main: Number(mainTimeSec),
+                added: Number(addedTimeSec),
+              });
+            }
+          }
 
           // Reset kibitzer live infos
           liveInfoState.setLiveEngineData("green", {

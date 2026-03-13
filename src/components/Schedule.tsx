@@ -13,6 +13,12 @@ function formatOutcome(outcome: string) {
   return outcome.replace(/-/, "\u2013"); // en dash
 }
 
+function estimateGameDuration(mainTimeSeconds: number, addedTimeSec: number) {
+  const AVERAGE_MOVES_PER_CHESS_GAME = 75;
+
+  return 2 * (AVERAGE_MOVES_PER_CHESS_GAME * addedTimeSec + mainTimeSeconds);
+}
+
 const Schedule = memo(() => {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const currentGameRef = useRef<HTMLDivElement>(null);
@@ -24,6 +30,7 @@ const Schedule = memo(() => {
   const event = useEventStore((state) => state.cccEvent);
   const engines = useEventStore((state) => state.engines);
   const requestEvent = useEventStore((state) => state.requestEvent);
+  const timeControl = useEventStore((state) => state.timeControl);
 
   const scrollToCurrentGame = useCallback(() => {
     if (
@@ -78,6 +85,9 @@ const Schedule = memo(() => {
     return null;
   }
 
+  // TODO delete this. "Emulates" situation where no previous games was played
+  // event.tournamentDetails.schedule.past.length = 0;
+
   const gamesList = [
     ...event.tournamentDetails.schedule.past,
     ...(event.tournamentDetails.schedule.present
@@ -94,11 +104,15 @@ const Schedule = memo(() => {
       );
     })
     .filter((duration) => !!duration) as number[];
-  const averageDuration =
-    durationPerGame.reduce((prev, cur) => prev! + cur!, 0) /
-    durationPerGame.length /
-    1000 /
-    60;
+
+  const timePerGameEstimationMS =
+    estimateGameDuration(timeControl.main, timeControl.added) * 1000;
+
+  durationPerGame.push(timePerGameEstimationMS);
+
+  const durationSum = durationPerGame.reduce((prev, cur) => prev! + cur!, 0);
+  const averageDuration = durationSum / durationPerGame.length / 1000 / 60;
+
   const currentGameIdx = event.tournamentDetails.schedule.past.length;
 
   const gamesPerRound = engines.length * (engines.length - 1);

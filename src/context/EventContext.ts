@@ -23,6 +23,8 @@ type EventContext = _Nullish<{
 }> & {
   requestEvent: RequestEventFn;
   setRequestEvent: (fn: RequestEventFn) => void;
+  timeControl: { main: number; added: number };
+  setTimeControl: (tc: { main: number; added: number }) => void;
 };
 
 export const useEventStore = create<EventContext>((set, get) => {
@@ -115,6 +117,11 @@ export const useEventStore = create<EventContext>((set, get) => {
     requestEvent: () => {},
     setRequestEvent(fn) {
       set({ requestEvent: fn });
+    },
+
+    timeControl: { main: -1, added: -1 },
+    setTimeControl(tc) {
+      set({ timeControl: tc });
     },
   };
 });
