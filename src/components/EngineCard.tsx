@@ -3,12 +3,19 @@ import { EngineLogo } from "./EngineLogo";
 import "./EngineCard.css";
 import { SkeletonBlock, SkeletonText } from "./Loading";
 import { MoveList } from "./MoveList";
-import { buildPvGame, findPvDisagreementPoint, normalizePv } from "../utils";
+import {
+  buildPvGame,
+  buildPvGame__DEV,
+  findPvDisagreementPoint,
+  normalizePv,
+} from "../utils";
 import { Chess, Chess960 } from "../chess.js/chess";
 import { useMediaQuery } from "react-responsive";
 import { useKibitzerBoard } from "../hooks/BoardHook";
 import type { EngineColor } from "../LiveInfo";
 import { useLiveInfo } from "../context/LiveInfoContext";
+import { useKibitzerBoard__DEV } from "../hooks/useKibitzerBoard";
+import { EngineInfoTable } from "./EngineInfoTable";
 
 type EngineCardProps = {
   color: EngineColor;
@@ -36,17 +43,7 @@ export function formatTime(time: number) {
 
 const EngineCard = memo(
   ({ color, opponentColor, kibitzerLayout }: EngineCardProps) => {
-    // This is the main re-render trigger for black / white
-    const time =
-      Number(
-        useLiveInfo((state) =>
-          color === "white"
-            ? state.clocks.wtime
-            : color === "black"
-              ? state.clocks.btime
-              : "1"
-        ) || 1
-      ) || 1;
+    const t1 = performance.now();
 
     // Kibitzers re-render on FEN change, or on every depth change after depth 15
     const fen = useLiveInfo((state) =>
@@ -63,6 +60,7 @@ const EngineCard = memo(
 
     const state = useLiveInfo.getState();
     const engine = state.liveInfos[color].engineInfo;
+
     const liveInfo = state.liveInfos[color].liveInfo;
     const opponentInfo = opponentColor
       ? state.liveInfos[opponentColor].liveInfo
@@ -75,7 +73,15 @@ const EngineCard = memo(
     );
 
     const data = liveInfo?.info;
-    const loading = !data || !engine || !time;
+    const loading = !data || !engine;
+
+    // const {
+    //   Board,
+    //   currentMoveNumber,
+    //   game,
+    //   setCurrentFen,
+    //   setCurrentMoveNumber,
+    // } = useKibitzerBoard({ animated: false });
 
     const {
       Board,
@@ -83,39 +89,30 @@ const EngineCard = memo(
       game,
       setCurrentFen,
       setCurrentMoveNumber,
-    } = useKibitzerBoard({ animated: false });
+    } = useKibitzerBoard__DEV({ animated: false });
 
     const moves = useMemo(() => {
       if (loading || !fen || !data?.color) return undefined;
 
-      setCurrentMoveNumber(-1);
+      setCurrentMoveNumber(() => -1);
       return normalizePv(data.pvSan, data.color, fen);
-    }, [loading, data?.pvSan, data?.color, fen]);
+    }, [loading, fen, data?.color, data?.pvSan, setCurrentMoveNumber]);
 
     useEffect(() => {
       if (!fen || !moves) return;
 
-      game.current = buildPvGame(fen, moves, -1);
-      setCurrentFen(game.current.fen());
-    }, [moves]);
-
-    const fields = loading
-      ? ["Time", "Depth", "Nodes", "NPS", "TB Hits", "Hashfull"].map(
-          (label) => [label, null]
-        )
-      : [
-          ["Time", formatTime(time)],
-          ["Depth", `${data.depth} / ${data.seldepth ?? "-"}`],
-          ["Nodes", formatLargeNumber(data.nodes)],
-          ["NPS", formatLargeNumber(data.speed)],
-          ["TB Hits", formatLargeNumber(data.tbhits) ?? "-"],
-          ["Hashfull", data.hashfull ?? "-"],
-        ];
+      buildPvGame__DEV(game, fen, moves, -1);
+      setCurrentFen(game.fen());
+    }, [fen, game, moves, setCurrentFen]);
 
     const isMobile = useMediaQuery({ maxWidth: 1400 });
 
     const safeFen = fen ?? new Chess().fen();
     const moveNumberOffset = new Chess960(safeFen).moveNumber() - 1;
+
+    const t2 = performance.now();
+
+    console.log(`timer: ${t2 - t1} sec`);
 
     return (
       <div
@@ -136,25 +133,7 @@ const EngineCard = memo(
 
           <hr />
 
-          <div className="engineInfoTable">
-            {fields.map(([label, value]) => (
-              <div
-                className={
-                  "engineField " + label?.replace(" ", "").toLowerCase()
-                }
-                key={label}
-              >
-                {loading ? (
-                  <SkeletonText width="100%" />
-                ) : (
-                  <>
-                    <div className="key">{label}</div>
-                    <div className="value">{value}</div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
+          <EngineInfoTable color={color} />
 
           <hr />
 
@@ -190,6 +169,9 @@ const EngineCard = memo(
             />
           </div>
         ) : null}
+        {(() => {
+          console.log(`render time ${performance.now() - t2} sec`);
+        })()}
       </div>
     );
   }

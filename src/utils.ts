@@ -80,6 +80,36 @@ export function buildPvGame(
   return game;
 }
 
+export function buildPvGame__DEV(
+  game: Chess960,
+  fen: string,
+  moves: string[],
+  pvMoveNumber: number
+) {
+  // const game = new Chess960(fen);
+
+  for (let i = 0; i < moves.length; i++) {
+    if (pvMoveNumber !== -1 && i > pvMoveNumber) {
+      break;
+    }
+
+    const san = moves[i];
+    if (!san) break;
+
+    try {
+      const result = game.move(san, { strict: false });
+
+      if (!result) {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
+
+  return game;
+}
+
 // Normalize a PV so it always starts from the current position (fen's turn).
 // If it's not this engine's turn, its PV starts with its own last move,
 // so we strip that first move to align both PVs to the same position.
