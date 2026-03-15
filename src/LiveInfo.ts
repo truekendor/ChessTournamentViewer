@@ -1,31 +1,24 @@
 import type { DrawShape } from "@lichess-org/chessground/draw";
-import { Chess960, type Square } from "./chess.js/chess";
+import { Chess960, type Color, type Square } from "./chess.js/chess";
 import type { CCCEngine, CCCLiveInfo } from "./types";
 import { sanToUci, uciToSan } from "./utils";
 
+export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
-type LiveEngineDataObject = {
+export type LiveEngineDataObject = {
   engineInfo: CCCEngine;
   liveInfo: LiveInfoEntry[];
 };
-export type LiveEngineData = {
-  white: LiveEngineDataObject;
-  black: LiveEngineDataObject;
-  red: LiveEngineDataObject;
-  blue: LiveEngineDataObject;
-  green: LiveEngineDataObject;
-};
+export type LiveEngineData = Record<EngineColor, LiveEngineDataObject>;
+
 export type LiveEngineDataEntryObject = {
   engineInfo: CCCEngine;
   liveInfo: LiveInfoEntry;
 };
-export type LiveEngineDataEntry = {
-  white: LiveEngineDataEntryObject;
-  black: LiveEngineDataEntryObject;
-  red: LiveEngineDataEntryObject;
-  blue: LiveEngineDataEntryObject;
-  green: LiveEngineDataEntryObject;
-};
+export type LiveEngineDataEntry = Record<
+  EngineColor,
+  LiveEngineDataEntryObject
+>;
 
 export const EmptyEngineDefinition: CCCEngine = {
   authors: "",
@@ -46,6 +39,103 @@ export const EmptyEngineDefinition: CCCEngine = {
   website: "",
   year: "",
 };
+
+export function parseTCECLiveInfo(
+  json: any,
+  fen: string,
+  color: "blue" | "red"
+): CCCLiveInfo {
+  const blackToMove = json.pv.includes("...");
+  const fullmove = blackToMove
+    ? Number(json.pv.split("...")[0])
+    : Number(json.pv.split(".")[0]);
+  const ply = 2 * (fullmove - 1) + (blackToMove ? 1 : 0);
+
+  const tmpGame = new Chess960(fen);
+  const pvMoves = json.pv
+    .split(/ |\.\.\./)
+    .filter((str: string) => !str.match(/^\d+\.?$/));
+
+  const lanMoves: string[] = [];
+  for (let pvMove of pvMoves) {
+    try {
+      const move = tmpGame.move(pvMove, { strict: false });
+      if (move) {
+        lanMoves.push(move.lan);
+      } else {
+        break;
+      }
+    } catch (_) {
+      break;
+    }
+  }
+
+  return {
+    type: "liveInfo",
+    info: {
+      color: color,
+      depth: json.depth.split("/")[0],
+      hashfull: "-",
+      multipv: "1",
+      name: "",
+      nodes: String(json.nodes),
+      pv: lanMoves.join(" "),
+      pvSan: pvMoves.join(" "),
+      score: String(json.eval),
+      seldepth: json.depth.split("/")[1],
+      speed: String(
+        Number(json.speed.split(" ")[0]) * (color === "blue" ? 1000 : 1000000)
+      ),
+      tbhits: String(json.tbhits),
+      time: "-",
+      ply,
+    },
+  };
+}
+
+export function getLiveInfosForMove(
+  liveEngineData: LiveEngineData,
+  moveNumber: number,
+  turn: Color
+) {
+  function kibitzer(base: LiveInfoEntry, color: "red" | "green" | "blue") {
+    const array = liveEngineData[color].liveInfo;
+    return {
+      engineInfo: liveEngineData[color].engineInfo,
+      liveInfo:
+        array.at(base?.info.ply ?? moveNumber) ??
+        array.at(base?.info.ply ? base?.info.ply - 1 : moveNumber),
+    };
+  }
+
+  if (turn === "w") {
+    const white = liveEngineData.white.liveInfo.at(moveNumber);
+    const black = liveEngineData.black.liveInfo.at(
+      moveNumber === -1 ? -1 : Math.max(0, moveNumber - 1)
+    );
+
+    return {
+      black: { liveInfo: black, engineInfo: liveEngineData.black.engineInfo },
+      white: { liveInfo: white, engineInfo: liveEngineData.white.engineInfo },
+      green: kibitzer(white, "green"),
+      red: kibitzer(white, "red"),
+      blue: kibitzer(white, "blue"),
+    };
+  } else {
+    const white = liveEngineData.white.liveInfo.at(
+      moveNumber === -1 ? -1 : Math.max(0, moveNumber - 1)
+    );
+    const black = liveEngineData.black.liveInfo.at(moveNumber);
+
+    return {
+      black: { liveInfo: black, engineInfo: liveEngineData.black.engineInfo },
+      white: { liveInfo: white, engineInfo: liveEngineData.white.engineInfo },
+      green: kibitzer(black, "green"),
+      red: kibitzer(black, "red"),
+      blue: kibitzer(black, "blue"),
+    };
+  }
+}
 
 export function extractLiveInfoFromTCECComment(
   comment: string,

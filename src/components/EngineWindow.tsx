@@ -1,41 +1,49 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMediaQuery } from "react-responsive";
 import { EngineCard } from "./EngineCard";
 import "./EngineWindow.css";
-import type { LiveEngineDataEntry } from "../LiveInfo";
 import { EngineWindowMobile } from "./EngineWindowMobile";
 import { findPvDisagreementPoint } from "../utils";
 import { EngineLogo } from "./EngineLogo";
 import { EngineStats } from "./EngineStats";
 import { EnginePV } from "./EnginePV";
-
-export type EngineWindowProps = {
-  liveInfos: LiveEngineDataEntry;
-  clocks?: { wtime?: string; btime?: string };
-  fen: string;
-};
+import { useLiveInfo } from "../context/LiveInfoContext";
+import { useClocks } from "../hooks/useClocks";
+import type { EngineColor } from "../LiveInfo";
+import { useShallow } from "zustand/shallow";
 
 const TABS = ["Kibitzers", "Kibitzer PVs"] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAYING_ENGINES = ["white", "black"] as const;
 
-export function EngineWindow({ liveInfos, clocks, fen }: EngineWindowProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("Kibitzers");
-  const activeKibitzers = (["green", "blue", "red"] as const).filter(
-    (color) => !!liveInfos[color].liveInfo
+export function EngineWindow() {
+  useClocks();
+
+  const { kibitzerDisagreement, activeKibitzersJson } = useLiveInfo(
+    useShallow((state) => {
+      const liveInfos = state.liveInfos;
+
+      const activeKibitzers = (["green", "blue", "red"] as const).filter(
+        (color) => !!liveInfos[color].liveInfo
+      );
+
+      const kibitzerLiveInfos = activeKibitzers.map(
+        (color) => liveInfos[color].liveInfo
+      );
+      return {
+        kibitzerDisagreement: findPvDisagreementPoint(
+          state.game.fenAt(state.currentMoveNumber),
+          ...kibitzerLiveInfos
+        ),
+        activeKibitzersJson: JSON.stringify(activeKibitzers),
+      };
+    })
   );
-  const kibitzerDisagreement = useMemo(() => {
-    const kibitzerLiveInfos = activeKibitzers.map(
-      (color) => liveInfos[color].liveInfo
-    );
-    return findPvDisagreementPoint(fen, ...kibitzerLiveInfos);
-  }, [fen, JSON.stringify(activeKibitzers)]);
-  const [wtime, btime] = useMemo(() => {
-    const wtime = Number(clocks?.wtime || 1) || 1;
-    const btime = Number(clocks?.btime || 1) || 1;
-    return [wtime, btime];
-  }, [clocks?.wtime, clocks?.btime]);
+  const activeKibitzers = JSON.parse(activeKibitzersJson) as EngineColor[];
+
+  const { liveInfos } = useLiveInfo.getState();
+  const [activeTab, setActiveTab] = useState<Tab>("Kibitzers");
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -46,7 +54,7 @@ export function EngineWindow({ liveInfos, clocks, fen }: EngineWindowProps) {
 
   // MOBILE FALLBACK: Render a different component
   const isMobile = useMediaQuery({ maxWidth: 1400 });
-  if (isMobile) return <EngineWindowMobile fen={fen} liveInfos={liveInfos} />;
+  if (isMobile) return <EngineWindowMobile />;
 
   const headerEngines = activeTab.includes("Engine")
     ? PLAYING_ENGINES
@@ -56,13 +64,7 @@ export function EngineWindow({ liveInfos, clocks, fen }: EngineWindowProps) {
 
   const kibitzerWindow =
     activeKibitzers.length === 0 ? null : activeKibitzers.length === 1 ? (
-      <EngineCard
-        engine={liveInfos[activeKibitzers[0]].engineInfo}
-        info={liveInfos[activeKibitzers[0]].liveInfo}
-        time={1}
-        placeholder="Kibitzer"
-        fen={fen}
-      />
+      <EngineCard color={activeKibitzers[0]} />
     ) : (
       <div className="kibitzerWindow">
         <div className="engineTabs">
@@ -117,7 +119,6 @@ export function EngineWindow({ liveInfos, clocks, fen }: EngineWindowProps) {
                 {activeKibitzers.map((color) => (
                   <td key={color}>
                     <EnginePV
-                      fen={fen}
                       pvDisagreementPoint={kibitzerDisagreement}
                       liveInfoData={liveInfos[color]}
                     />
@@ -132,22 +133,8 @@ export function EngineWindow({ liveInfos, clocks, fen }: EngineWindowProps) {
 
   return (
     <div className="engineWindow">
-      <EngineCard
-        engine={liveInfos.black.engineInfo}
-        info={liveInfos.black.liveInfo}
-        opponentInfo={liveInfos.white.liveInfo}
-        time={btime}
-        placeholder="Black"
-        fen={fen}
-      />
-      <EngineCard
-        engine={liveInfos.white.engineInfo}
-        info={liveInfos.white.liveInfo}
-        opponentInfo={liveInfos.black.liveInfo}
-        time={wtime}
-        placeholder="White"
-        fen={fen}
-      />
+      <EngineCard color="black" opponentColor="white" />
+      <EngineCard color="white" opponentColor="black" />
       {kibitzerWindow}
     </div>
   );

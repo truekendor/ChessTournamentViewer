@@ -85,29 +85,6 @@ const MoveList = memo(
       }
     }, [moves.length, currentMoveNumber]);
 
-    useEffect(() => {
-      if (controllers) {
-        const handleKeyDown = (e: KeyboardEvent) => {
-          if (
-            e.target instanceof HTMLInputElement ||
-            e.target instanceof HTMLTextAreaElement
-          )
-            return;
-          if (e.key === "ArrowLeft") undoMove();
-          else if (e.key === "ArrowRight") redoMove();
-          else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            undoAllMoves();
-          } else if (e.key === "ArrowDown") {
-            e.preventDefault();
-            redoAllMoves();
-          }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-      }
-    }, [currentMoveNumber, moves.length]);
-
     function undoAllMoves() {
       setCurrentMoveNumber(() => 0);
       const el = moveListRef.current;
@@ -144,6 +121,29 @@ const MoveList = memo(
         return previous + 1;
       });
     }
+
+    useEffect(() => {
+      if (controllers) {
+        const handleKeyDown = (e: KeyboardEvent) => {
+          if (
+            e.target instanceof HTMLInputElement ||
+            e.target instanceof HTMLTextAreaElement
+          )
+            return;
+          if (e.key === "ArrowLeft") undoMove();
+          else if (e.key === "ArrowRight") redoMove();
+          else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            undoAllMoves();
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            redoAllMoves();
+          }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+      }
+    }, [currentMoveNumber, moves.length]);
 
     function copyFen() {
       copyToClipboard(

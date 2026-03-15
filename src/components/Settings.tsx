@@ -1,14 +1,10 @@
 import { MdOutlineClose } from "react-icons/md";
 import type { EngineSettings } from "../engine/EngineWorker";
 import "./Settings.css";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { loadSettings, saveSettings } from "../LocalStorage";
-
-type SettingsProps = {
-  kibitzerSettings: EngineSettings;
-  setKibitzerSettings: (settings: EngineSettings) => void;
-  onClose: () => void;
-};
+import { usePopup } from "../context/PopupContext";
+import { useKibitzerSettings } from "../context/KibitzerSettings";
 
 export function getDefaultKibitzerSettings(): EngineSettings {
   const settings = loadSettings();
@@ -22,16 +18,21 @@ export function getDefaultKibitzerSettings(): EngineSettings {
   return loadedSettings;
 }
 
-export function Settings({
-  kibitzerSettings,
-  onClose,
-  setKibitzerSettings,
-}: SettingsProps) {
+export const Settings = memo(() => {
+  const kibitzerSettings = useKibitzerSettings(
+    (state) => state.kibitzerSettings
+  );
+  const setKibitzerSettings = useKibitzerSettings(
+    (state) => state.setKibitzerSettings
+  );
+
   const [hash, setHash] = useState(kibitzerSettings.hash);
   const [threads, setThreads] = useState(kibitzerSettings.threads);
   const [enableKibitzer, setEnableKibitzer] = useState(
     kibitzerSettings.enableKibitzer
   );
+
+  const setPopupState = usePopup((state) => state.setPopupState);
 
   function applySettings() {
     const settings = { hash, threads, enableKibitzer };
@@ -43,7 +44,11 @@ export function Settings({
     <div className="settings">
       <div className="settingsHeader">
         <h4>Kibitzer Settings</h4>
-        <button className="closeButton" onClick={onClose} title="Close">
+        <button
+          className="closeButton"
+          onClick={() => setPopupState("none")}
+          title="Close"
+        >
           <MdOutlineClose />
         </button>
       </div>
@@ -86,4 +91,4 @@ export function Settings({
       </button>
     </div>
   );
-}
+});

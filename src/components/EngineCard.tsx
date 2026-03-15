@@ -1,21 +1,18 @@
-import { useMemo, useRef, useCallback, memo, useEffect } from "react";
-import type { CCCEngine, CCCLiveInfo } from "../types";
-import { Board, type BoardHandle } from "../components/Board";
+import { useMemo, memo, useEffect } from "react";
 import "./EngineCard.css";
 import { SkeletonBlock, SkeletonText } from "./Loading";
 import { MoveList } from "./MoveList";
 import { buildPvGame, findPvDisagreementPoint, normalizePv } from "../utils";
 import { Chess, Chess960 } from "../chess.js/chess";
 import { useMediaQuery } from "react-responsive";
+import { useKibitzerBoard } from "../hooks/BoardHook";
+import type { EngineColor } from "../LiveInfo";
+import { useLiveInfo } from "../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 
 type EngineCardProps = {
-  info?: CCCLiveInfo;
-  engine?: CCCEngine;
-  time: number;
-  placeholder?: string;
-  fen: string | undefined;
-  opponentInfo?: CCCLiveInfo;
+  color: EngineColor;
+  opponentColor?: EngineColor;
   kibitzerLayout?: boolean;
 };
 
@@ -38,56 +35,69 @@ export function formatTime(time: number) {
 }
 
 const EngineCard = memo(
-  ({
-    engine,
-    info,
-    time,
-    placeholder,
-    fen,
-    opponentInfo,
-    kibitzerLayout,
-  }: EngineCardProps) => {
-    const data = info?.info;
-    const loading = !data || !engine || !info || !time;
+  ({ color, opponentColor, kibitzerLayout }: EngineCardProps) => {
+    // This is the main re-render trigger for black / white
+    const time =
+      Number(
+        useLiveInfo((state) =>
+          color === "white"
+            ? state.clocks.wtime
+            : color === "black"
+              ? state.clocks.btime
+              : "1"
+        ) || 1
+      ) || 1;
 
-    const pvMoveNumber = useRef(-1);
-    const game = useRef(new Chess960());
-    const boardHandle = useRef<BoardHandle>(null);
+    // Kibitzers re-render on FEN change, or on every depth change after depth 15
+    const fen = useLiveInfo((state) =>
+      state.game.fenAt(state.currentMoveNumber)
+    );
+    useLiveInfo((state) =>
+      !["black", "white"].includes(color)
+        ? Math.max(
+            15,
+            Number(state.liveInfos[color].liveInfo?.info.depth || 0) || 0
+          )
+        : undefined
+    );
 
-    function updateBoard() {
-      boardHandle.current?.updateBoard(game.current, pvMoveNumber.current);
-    }
+    const state = useLiveInfo.getState();
+    const engine = state.liveInfos[color].engineInfo;
+    const liveInfo = state.liveInfos[color].liveInfo;
+    const opponentInfo = opponentColor
+      ? state.liveInfos[opponentColor].liveInfo
+      : undefined;
 
-    const pvDisagreementPoint = useMemo(() => {
-      return findPvDisagreementPoint(fen, info, opponentInfo);
-    }, [info, opponentInfo, fen]);
+    const pvDisagreementPoint = findPvDisagreementPoint(
+      fen,
+      liveInfo,
+      opponentInfo
+    );
+
+    const data = liveInfo?.info;
+    const loading = !data || !engine || !time;
+
+    const {
+      Board,
+      currentMoveNumber,
+      game,
+      setCurrentFen,
+      setCurrentMoveNumber,
+    } = useKibitzerBoard({ animated: false });
 
     const moves = useMemo(() => {
       if (loading || !fen || !data?.color) return undefined;
 
-      pvMoveNumber.current = -1;
+      setCurrentMoveNumber(-1);
       return normalizePv(data.pvSan, data.color, fen);
     }, [loading, data?.pvSan, data?.color, fen]);
 
     useEffect(() => {
       if (!fen || !moves) return;
 
-      // Throttle the actual update slightly to not destroy react render times
-      const timeout = setTimeout(() => {
-        game.current = buildPvGame(fen, moves, -1);
-        updateBoard();
-      }, 10);
-
-      return () => clearTimeout(timeout);
+      game.current = buildPvGame(fen, moves, -1);
+      setCurrentFen(game.current.fen());
     }, [moves]);
-
-    const setPvMoveNumber = useCallback(
-      (callback: (previous: number) => number) => {
-        pvMoveNumber.current = callback(pvMoveNumber.current);
-        updateBoard();
-      },
-      [moves, fen]
-    );
 
     const fields = loading
       ? ["Depth", "Nodes", "NPS", "TB Hits", "Hashfull"].map((label) => [
@@ -111,25 +121,20 @@ const EngineCard = memo(
       <div
         className={`engineComponent ${loading ? "loading" : ""} ${kibitzerLayout ? "kibitzer" : ""}`}
       >
-        <EngineMinimal
-          info={info}
-          time={time}
-          placeholder={placeholder}
-          engine={engine}
-        />
+        <EngineMinimal color={color} />
         <hr></hr>
 
         {loading && !isMobile ? (
           <SkeletonBlock width="100%" className="board" />
         ) : moves && !isMobile ? (
           <div className="engineRightSection">
-            <Board ref={boardHandle} animated={false} />
+            {Board}
 
             <MoveList
               startFen={safeFen}
               moves={moves}
-              currentMoveNumber={pvMoveNumber.current}
-              setCurrentMoveNumber={setPvMoveNumber}
+              currentMoveNumber={currentMoveNumber}
+              setCurrentMoveNumber={setCurrentMoveNumber}
               controllers={false}
               disagreementMoveIndex={
                 pvDisagreementPoint !== -1 ? pvDisagreementPoint : undefined

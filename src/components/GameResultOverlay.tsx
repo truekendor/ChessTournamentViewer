@@ -1,11 +1,23 @@
+import { useEventStore } from "../context/EventContext";
+import { useLiveInfo } from "../context/LiveInfoContext";
 import "./GameResultOverlay.css";
 
-type GameResultOverlayProps = { result: string; termination: string };
+export function GameResultOverlay() {
+  // Re-render when the position changes
+  useLiveInfo((state) => state.currentFen);
 
-export function GameResultOverlay({
-  result,
-  termination,
-}: GameResultOverlayProps) {
+  const cccGame = useEventStore((state) => state.cccGame);
+  const currentMoveNumber = useLiveInfo((state) => state.currentMoveNumber);
+  const game = useLiveInfo.getState().game;
+
+  const pgnHeaders = game.getHeaders();
+  const termination =
+    cccGame?.gameDetails?.termination ??
+    pgnHeaders["Termination"] ??
+    pgnHeaders["TerminationDetails"] ??
+    "";
+  const result = pgnHeaders["Result"];
+
   function getTerminationString() {
     switch (termination.toLowerCase()) {
       case "drawsyzygy":
@@ -27,15 +39,24 @@ export function GameResultOverlay({
       case "adjudication":
         if (result === "1/2-1/2") return "Draw Adjudication";
         else return "Adjudication";
+      case "abandoned":
+        if (result === "1-0") return "Black crashed";
+        if (result === "0-1") return "White crashed";
+        return termination;
       default:
         return termination;
     }
   }
 
   return (
-    <div className="gameResultOverlay">
-      <div className="result">{result}</div>
-      <div className="termination">{getTerminationString()}</div>
-    </div>
+    termination &&
+    result &&
+    result !== "*" &&
+    (currentMoveNumber === -1 || currentMoveNumber === game.length()) && (
+      <div className="gameResultOverlay">
+        <div className="result">{result}</div>
+        <div className="termination">{getTerminationString()}</div>
+      </div>
+    )
   );
 }

@@ -53,6 +53,7 @@
 
 .engineMinimal .engineName {
   font-weight: bold;
+  text-transform: capitalize;
 }
 
 .engineMinimal .engineInfoHeader {

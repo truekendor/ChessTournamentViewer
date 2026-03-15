@@ -1,13 +1,9 @@
 import { MdOutlineClose } from "react-icons/md";
-import type { CCCEngine, CCCEventUpdate, CCCGame } from "../types";
+import type { CCCGame } from "../types";
 import "./Crosstable.css";
-
-type CrosstableProps = {
-  engines: CCCEngine[];
-  cccEvent: CCCEventUpdate;
-  onClose: () => void;
-  requestEvent: (gameNr?: string) => void;
-};
+import { useEventStore } from "../context/EventContext";
+import { memo } from "react";
+import { usePopup } from "../context/PopupContext";
 
 type GameResult = "win" | "loss" | "draw" | "tbd";
 type GameScore = -1 | 0 | 1;
@@ -215,12 +211,19 @@ function formatPenta(penta: Penta): string {
   return "[" + penta.join(", ") + "]";
 }
 
-export function Crosstable({
-  engines,
-  cccEvent,
-  onClose,
-  requestEvent,
-}: CrosstableProps) {
+export const Crosstable = memo(() => {
+  const cccEvent = useEventStore((state) => state.cccEvent);
+  const engines = useEventStore((state) => state.engines) ?? [];
+  const requestEvent = useEventStore((state) => state.requestEvent);
+
+  const setPopupState = usePopup((state) => state.setPopupState);
+
+  if (!cccEvent) {
+    // we don't event render the crosstable without cccEvent
+    // so this is only needed for typescript
+    return <></>;
+  }
+
   const allGames = [
     ...cccEvent.tournamentDetails.schedule.past,
     ...(cccEvent.tournamentDetails.schedule.present
@@ -234,7 +237,11 @@ export function Crosstable({
       <tbody>
         <tr>
           <td>
-            <button className="closeButton" onClick={onClose} title="Close">
+            <button
+              className="closeButton"
+              onClick={() => setPopupState("none")}
+              title="Close"
+            >
               <MdOutlineClose />
             </button>
           </td>
@@ -318,7 +325,7 @@ export function Crosstable({
                             style={{ cursor: "pointer" }}
                             onClick={() => {
                               requestEvent(gamePair[0].gameNr);
-                              onClose();
+                              setPopupState("none");
                             }}
                           >
                             {textFromResult(result1)}
@@ -328,7 +335,7 @@ export function Crosstable({
                             style={{ cursor: "pointer" }}
                             onClick={() => {
                               requestEvent(gamePair[1].gameNr);
-                              onClose();
+                              setPopupState("none");
                             }}
                           >
                             {textFromResult(result2)}
@@ -345,4 +352,4 @@ export function Crosstable({
       </tbody>
     </table>
   );
-}
+});

@@ -6,7 +6,6 @@ import type {
   CCCEventUpdate,
   CCCGame,
   CCCGameUpdate,
-  CCCLiveInfo,
   CCCMessage,
 } from "./types";
 import { Chess960 } from "./chess.js/chess";
@@ -14,11 +13,12 @@ import {
   EmptyEngineDefinition,
   extractLiveInfoFromInfoString,
   extractLiveInfoFromTCECComment,
+  parseTCECLiveInfo,
 } from "./LiveInfo";
 
-export class TCECSocket implements TournamentWebSocket {
+export class TCECWebSocket implements TournamentWebSocket {
   private socket: SocketIOClient.Socket | null = null;
-  private onMessage: ((message: CCCMessage) => void) | null = null;
+  private callback: ((message: CCCMessage) => void) | null = null;
 
   private live: boolean = true;
   private game: Chess960 = new Chess960();
@@ -62,10 +62,8 @@ export class TCECSocket implements TournamentWebSocket {
             this.loadKibitzerData(lc0, sf);
           });
       } else if (!gameNr && !eventNr) {
-        if (this.onMessage) {
-          this.disconnect();
-          this.connect(this.onMessage);
-        }
+        this.disconnect();
+        this.connect(this.callback ?? function () {});
       } else if (eventNr) {
         this.live = false;
         this.openEvent(
@@ -82,7 +80,8 @@ export class TCECSocket implements TournamentWebSocket {
   }
 
   connect(onMessage: (message: CCCMessage) => void) {
-    this.onMessage = onMessage;
+    this.callback = onMessage;
+    if (this.isConnected()) return;
 
     this.socket = io.connect("https://tcec-chess.com", {
       transports: ["polling", "websocket"],
@@ -91,22 +90,6 @@ export class TCECSocket implements TournamentWebSocket {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
-
-    // this.socket.on("banner", (json: any) => {
-    //   console.log("banner", json);
-    // });
-
-    // this.socket.on("bracket", (json: any) => {
-    //   console.log("bracket", json);
-    // });
-
-    // this.socket.on("crash", (json: any) => {
-    //   console.log("crash", json);
-    // });
-
-    // this.socket.on("crosstable", (json: any) => {
-    //   console.log("crosstable", json);
-    // });
 
     this.socket.on("htmlread", (json: any) => {
       if (!this.live) return;
@@ -119,7 +102,10 @@ export class TCECSocket implements TournamentWebSocket {
         infoString,
         this.game.fen()
       );
-      if (liveInfo) onMessage(liveInfo.liveInfo);
+
+      if (liveInfo) {
+        this.callback?.(liveInfo.liveInfo);
+      }
     });
 
     // this.socket.on("livechart", (json: any) => {
@@ -132,12 +118,14 @@ export class TCECSocket implements TournamentWebSocket {
 
     this.socket.on("liveeval", (json: any) => {
       if (!this.live) return;
-      onMessage(this.parseLiveEval(json, this.game.fen(), "blue"));
+
+      this.callback?.(parseTCECLiveInfo(json, this.game.fen(), "blue"));
     });
 
     this.socket.on("liveeval1", (json: any) => {
       if (!this.live) return;
-      onMessage(this.parseLiveEval(json, this.game.fen(), "red"));
+
+      this.callback?.(parseTCECLiveInfo(json, this.game.fen(), "red"));
     });
 
     this.socket.on("pgn", (json: any) => {
@@ -145,7 +133,7 @@ export class TCECSocket implements TournamentWebSocket {
 
       if (this.game.getHeaders()["Result"] !== "*") {
         this.disconnect();
-        this.connect(onMessage);
+        this.connect(this.callback ?? function () {});
         return;
       }
 
@@ -164,7 +152,12 @@ export class TCECSocket implements TournamentWebSocket {
         if (!move) break;
 
         this.game.move(move.san, { strict: false });
-        onMessage({ type: "newMove", move: move.lan, times: { w: 1, b: 1 } });
+
+        this.callback?.({
+          type: "newMove",
+          move: move.lan,
+          times: { w: 1, b: 1 },
+        });
 
         // Extract the live info
         const relevantKeys = Object.keys(moveData).filter(
@@ -181,7 +174,9 @@ export class TCECSocket implements TournamentWebSocket {
           commentString,
           fenBeforeMove
         );
-        if (liveInfo) onMessage(liveInfo);
+        if (liveInfo) {
+          this.callback?.(liveInfo);
+        }
       }
 
       const whiteToMove = this.game.turn() === "w";
@@ -197,13 +192,14 @@ export class TCECSocket implements TournamentWebSocket {
       });
 
       if (json.Headers.Result !== "*") {
-        onMessage({
+        this.callback?.({
           type: "result",
           blackName: json.Headers.Black,
           whiteName: json.Headers.White,
           reason: json.Headers.TerminationDetails,
           score: json.Headers.Result,
         });
+
         this.game.setHeader("Result", json.Headers.Result);
       }
     });
@@ -230,61 +226,16 @@ export class TCECSocket implements TournamentWebSocket {
     this.loadEventList();
   }
 
-  private parseLiveEval(
-    json: any,
-    fen: string,
-    color: "blue" | "red"
-  ): CCCLiveInfo {
-    const blackToMove = json.pv.includes("...");
-    const fullmove = blackToMove
-      ? Number(json.pv.split("...")[0])
-      : Number(json.pv.split(".")[0]);
-    const ply = 2 * (fullmove - 1) + (blackToMove ? 1 : 0);
+  isConnected() {
+    return !!this.socket;
+  }
 
-    const tmpGame = new Chess960(fen);
-    const pvMoves = json.pv
-      .split(/ |\.\.\./)
-      .filter((str: string) => !str.match(/^\d+\.?$/));
-
-    const lanMoves: string[] = [];
-    for (let pvMove of pvMoves) {
-      try {
-        const move = tmpGame.move(pvMove, { strict: false });
-        if (move) {
-          lanMoves.push(move.lan);
-        } else {
-          break;
-        }
-      } catch (_) {
-        break;
-      }
-    }
-
-    return {
-      type: "liveInfo",
-      info: {
-        color: color,
-        depth: json.depth.split("/")[0],
-        hashfull: "-",
-        multipv: "1",
-        name: "",
-        nodes: String(json.nodes),
-        pv: lanMoves.join(" "),
-        pvSan: pvMoves.join(" "),
-        score: String(json.eval),
-        seldepth: json.depth.split("/")[1],
-        speed: String(
-          Number(json.speed.split(" ")[0]) * (color === "blue" ? 1000 : 1000000)
-        ),
-        tbhits: String(json.tbhits),
-        time: "-",
-        ply,
-      },
-    };
+  setHandler(onMessage: (message: CCCMessage) => void) {
+    this.callback = onMessage;
   }
 
   private loadEventList() {
-    if (!this.onMessage) return;
+    if (!this.callback) return;
 
     fetch("https://ctv.yoshie2000.de/tcec/archive/gamelist.json")
       .then((response) => response.json())
@@ -313,12 +264,12 @@ export class TCECSocket implements TournamentWebSocket {
             });
           }
         }
-        this.onMessage?.(eventList);
+        this.callback?.(eventList);
       });
   }
 
   private loadKibitzerData(lc0: any, sf: any) {
-    this.onMessage?.({
+    this.callback?.({
       type: "kibitzer",
       color: "blue",
       engine: {
@@ -327,7 +278,7 @@ export class TCECSocket implements TournamentWebSocket {
         imageUrl: "https://ctv.yoshie2000.de/tcec/image/engine/Lc0.png",
       },
     });
-    this.onMessage?.({
+    this.callback?.({
       type: "kibitzer",
       color: "red",
       engine: {
@@ -359,7 +310,7 @@ export class TCECSocket implements TournamentWebSocket {
       ) {
         lc0Move.eval = "+" + lc0Move.eval;
       }
-      this.onMessage?.(this.parseLiveEval(lc0Move, comments[i].fen, "blue"));
+      this.callback?.(parseTCECLiveInfo(lc0Move, comments[i].fen, "blue"));
     });
     (sf.moves as any[]).forEach((sfMove, i) => {
       if (sfMove.pv.includes("...")) {
@@ -376,7 +327,7 @@ export class TCECSocket implements TournamentWebSocket {
       ) {
         sfMove.eval = "+" + sfMove.eval;
       }
-      this.onMessage?.(this.parseLiveEval(sfMove, comments[i].fen, "red"));
+      this.callback?.(parseTCECLiveInfo(sfMove, comments[i].fen, "red"));
     });
   }
 
@@ -544,7 +495,7 @@ export class TCECSocket implements TournamentWebSocket {
             isRoundRobin,
           },
         };
-        this.onMessage?.(event);
+        this.callback?.(event);
         this.event = event;
 
         this.openGame(livePGN);
@@ -553,7 +504,7 @@ export class TCECSocket implements TournamentWebSocket {
   }
 
   private openGame(pgn: string) {
-    if (!this.event || !this.onMessage) return;
+    if (!this.event || !this.callback) return;
 
     this.game.loadPgn(pgn);
     this.game.setHeader("White", this.game.getHeaders()["White"].split(" ")[0]);
@@ -587,7 +538,7 @@ export class TCECSocket implements TournamentWebSocket {
         pgn: this.game.pgn(),
       },
     };
-    this.onMessage(gameUpdate);
+    this.callback(gameUpdate);
 
     const lastComment0 = this.game.getComments().at(-2);
     const lastComment1 = this.game.getComments().at(-1);
@@ -604,7 +555,7 @@ export class TCECSocket implements TournamentWebSocket {
 
     const whiteToMove = this.game.turn() === "w";
 
-    this.onMessage({
+    this.callback({
       type: "clocks",
       binc: "1",
       btime: whiteToMove ? clock1 : clock0,

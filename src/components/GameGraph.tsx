@@ -1,21 +1,10 @@
 import { Line } from "react-chartjs-2";
 import type { CCCLiveInfo } from "../types";
-import { useState } from "react";
+import { memo, useState } from "react";
 import "./GameGraph.css";
-import type { LiveInfoEntry } from "../LiveInfo";
 import { formatLargeNumber, formatTime } from "./EngineCard";
 import type { PointElement } from "chart.js";
-
-type GameGraphProps = {
-  liveInfosWhite: LiveInfoEntry[];
-  liveInfosBlack: LiveInfoEntry[];
-  liveInfosGreen: LiveInfoEntry[];
-  liveInfosRed: LiveInfoEntry[];
-  liveInfosBlue: LiveInfoEntry[];
-  setCurrentMoveNumber: (callback: (previous: number) => number) => void;
-  currentMoveNumber: number;
-  reducedMotion: boolean;
-};
+import { useLiveInfo } from "../context/LiveInfoContext";
 
 const COLORS = {
   white: "rgba(255, 255, 255, 0.7)",
@@ -141,27 +130,32 @@ const MODES = [
   },
 ];
 
-export function GameGraph({
-  liveInfosWhite,
-  liveInfosBlack,
-  liveInfosGreen,
-  liveInfosRed,
-  liveInfosBlue,
-  setCurrentMoveNumber,
-  currentMoveNumber,
-  reducedMotion,
-}: GameGraphProps) {
+export const GameGraph = memo(() => {
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  const liveInfosObj = useLiveInfo((state) => state.liveEngineData);
+
   const liveInfos = {
-    white: liveInfosWhite,
-    black: liveInfosBlack,
-    green: liveInfosGreen,
-    red: liveInfosRed,
-    blue: liveInfosBlue,
+    white: liveInfosObj.white.liveInfo,
+    black: liveInfosObj.black.liveInfo,
+    green: liveInfosObj.green.liveInfo,
+    red: liveInfosObj.red.liveInfo,
+    blue: liveInfosObj.blue.liveInfo,
   };
+
+  const currentMoveNumber = useLiveInfo((state) => state.currentMoveNumber);
+  const setCurrentMoveNumber = useLiveInfo(
+    (state) => state.setCurrentMoveNumber
+  );
 
   const [mode, setMode] = useState(0);
 
-  const bookPlies = liveInfos.white.findIndex((liveInfo) => !!liveInfo);
+  const bookPlies = Math.min(
+    liveInfos.white.findIndex((liveInfo) => !!liveInfo),
+    liveInfos.black.findIndex((liveInfo) => !!liveInfo)
+  );
 
   const colors = Object.keys(liveInfos) as (keyof typeof liveInfos)[];
   const lengths = colors.map((color) => liveInfos[color].length);
@@ -313,4 +307,4 @@ export function GameGraph({
       </div>
     </div>
   );
-}
+});

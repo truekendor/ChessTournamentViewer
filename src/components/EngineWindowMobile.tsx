@@ -2,16 +2,19 @@ import { useMemo, useState } from "react";
 import { EngineLogo } from "./EngineLogo";
 import { EnginePV } from "./EnginePV";
 import { EngineStats } from "./EngineStats";
-import type { EngineWindowProps } from "./EngineWindow";
 import { findPvDisagreementPoint } from "../utils";
 import "./EngineWindowMobile.css";
+import { useLiveInfo } from "../context/LiveInfoContext";
 
 const TABS = ["Engines", "Engine PVs", "Kibitzers", "Kibitzer PVs"] as const;
 type Tab = (typeof TABS)[number];
 
 const PLAYING_ENGINES = ["white", "black"] as const;
 
-export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
+export function EngineWindowMobile() {
+  const liveInfos = useLiveInfo((state) => state.liveInfos);
+  const fen = useLiveInfo((state) => state.currentFen);
+
   const [activeTab, setActiveTab] = useState<Tab>("Engines");
 
   const activeKibitzers = (["green", "blue", "red"] as const).filter(
@@ -89,7 +92,6 @@ export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
               {PLAYING_ENGINES.map((color) => (
                 <td key={color}>
                   <EnginePV
-                    fen={fen}
                     pvDisagreementPoint={playingEnginesDisagreement}
                     liveInfoData={liveInfos[color]}
                   />
@@ -109,7 +111,6 @@ export function EngineWindowMobile({ fen, liveInfos }: EngineWindowProps) {
               {activeKibitzers.map((color) => (
                 <td key={color}>
                   <EnginePV
-                    fen={fen}
                     pvDisagreementPoint={kibitzerDisagreement}
                     liveInfoData={liveInfos[color]}
                   />
