@@ -32,6 +32,7 @@ export const BoardWindow = memo(() => {
 
   useKibitzer({ updateBoard });
 
+  const cccEventList = useEventStore((state) => state.cccEventList);
   const cccEvent = useEventStore((state) => state.cccEvent);
   const game = useLiveInfo((state) => state.game);
 
@@ -177,6 +178,15 @@ export const BoardWindow = memo(() => {
 
     useEventStore.getState().setRequestEvent(requestEvent);
   }, []);
+
+  useEffect(() => {
+    if (!cccEvent || !cccEventList) return;
+
+    const eventExists = cccEventList.events.some((event) => String(event.id) === cccEvent.tournamentDetails.tNr);
+    if (!eventExists) {
+      useEventStore.getState().requestEvent(undefined, cccEventList.events[0].id)
+    }
+  }, [cccEvent, cccEventList]);
 
   const isMobile = useMediaQuery({ maxWidth: 775 });
 
