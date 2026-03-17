@@ -18,6 +18,9 @@ import { StandingsWindow } from "./components/StandingsWindow/StandingsWindow";
 import { BoardWindow } from "./components/BoardWindow/BoardWindow";
 import { ScheduleWindow } from "./components/ScheduleWindow/ScheduleWindow";
 import { Popup } from "./components/Popup/Popup";
+import { useEffect } from "react";
+
+import init from "../public/pkg/chess_wasm";
 
 Chart.register(
   CategoryScale,
@@ -30,6 +33,13 @@ Chart.register(
 );
 
 function App() {
+  useEffect(() => {
+    const loadWasm = async () => {
+      await init();
+    };
+    loadWasm();
+  }, []);
+
   return (
     <div className="app">
       <Popup />

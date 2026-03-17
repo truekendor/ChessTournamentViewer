@@ -2,6 +2,7 @@ import type { DrawShape } from "@lichess-org/chessground/draw";
 import { Chess960, type Color, type Square } from "./chess.js/chess";
 import type { CCCEngine, CCCLiveInfo } from "./types";
 import { sanToUci, uciToSan } from "./utils";
+import type { ChessInterfaceJS } from "../public/pkg/chess_wasm";
 
 export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
@@ -208,7 +209,10 @@ function extractLiveInfoFromTCECGame(game: Chess960) {
   return { liveInfosWhite, liveInfosBlack };
 }
 
-export function extractLiveInfoFromGame(game: Chess960) {
+export function extractLiveInfoFromGame(
+  game: Chess960,
+  chessWasm: ChessInterfaceJS
+) {
   if (game.getHeaders()["Site"]?.includes("tcec"))
     return extractLiveInfoFromTCECGame(game);
 
@@ -216,6 +220,9 @@ export function extractLiveInfoFromGame(game: Chess960) {
 
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];
+
+  const t1 = performance.now();
+
   game.getComments().forEach((value, i, allValues) => {
     const data = value.comment?.split(", ") ?? [];
 
@@ -231,7 +238,15 @@ export function extractLiveInfoFromGame(game: Chess960) {
     }
 
     const pvString = data[8].replace("pv=", "").replaceAll('"', "");
-    const sanPv = uciToSan(fenBeforeMove, pvString.split(" ")).join(" ");
+
+    let sanPv = "";
+    if (fenBeforeMove) {
+      sanPv = chessWasm
+        .uci_to_san(pvString.split(" "), fenBeforeMove)
+        .join(" ");
+    } else {
+      sanPv = uciToSan(fenBeforeMove, pvString.split(" ")).join(" ");
+    }
 
     const liveInfo: CCCLiveInfo = {
       type: "liveInfo",
@@ -256,6 +271,9 @@ export function extractLiveInfoFromGame(game: Chess960) {
     if (color === "white") liveInfosWhite[liveInfo.info.ply] = liveInfo;
     else liveInfosBlack[liveInfo.info.ply] = liveInfo;
   });
+
+  const t2 = performance.now();
+  console.log(`time to parse uci: ${t2 - t1}ms`);
 
   return { liveInfosWhite, liveInfosBlack };
 }

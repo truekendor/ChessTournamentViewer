@@ -18,6 +18,7 @@ import { GameResultOverlay } from "../GameResultOverlay";
 import { useKibitzer } from "../../hooks/useKibitzer";
 import { LiveMoveList } from "../LiveMoveList";
 import { useMediaQuery } from "react-responsive";
+import { ChessInterfaceJS } from "../../../public/pkg/chess_wasm";
 
 const isTCEC = window.location.search.includes("tcec");
 const _initialWS = isTCEC ? new TCECWebSocket() : new CCCWebSocket();
@@ -77,8 +78,16 @@ export const BoardWindow = memo(() => {
           });
 
           // Load white + black engine live info
-          const { liveInfosBlack, liveInfosWhite } =
-            extractLiveInfoFromGame(game);
+
+          const chessWasm = ChessInterfaceJS.new();
+
+          const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(
+            game,
+            chessWasm
+          );
+
+          chessWasm.free();
+
           const engines = eventState.cccEvent?.tournamentDetails.engines ?? [];
           const wEngine =
             engines.find(
@@ -182,9 +191,13 @@ export const BoardWindow = memo(() => {
   useEffect(() => {
     if (!cccEvent || !cccEventList) return;
 
-    const eventExists = cccEventList.events.some((event) => String(event.id) === cccEvent.tournamentDetails.tNr);
+    const eventExists = cccEventList.events.some(
+      (event) => String(event.id) === cccEvent.tournamentDetails.tNr
+    );
     if (!eventExists) {
-      useEventStore.getState().requestEvent(undefined, cccEventList.events[0].id)
+      useEventStore
+        .getState()
+        .requestEvent(undefined, cccEventList.events[0].id);
     }
   }, [cccEvent, cccEventList]);
 
