@@ -4,7 +4,7 @@ import {
   Board as BoardComponent,
   type BoardHandle,
   type BoardProps,
-} from "../components/Board";
+} from "../components/BoardWindow/Board";
 import { useLiveInfo } from "../context/LiveInfoContext";
 import { getLiveInfosForMove } from "../LiveInfo";
 
@@ -41,9 +41,14 @@ export function useKibitzerBoard({ animated, id }: BoardProps) {
 
   useEffect(() => {
     setTimeout(() => {
-      boardHandle.current?.updateBoard(game.current, currentMoveNumber);
+      boardHandle.current?.updateBoard(
+        game.current,
+        currentMoveNumber,
+        undefined,
+        true
+      );
     }, 10);
-  }, [currentMoveNumber, currentFen]);
+  }, [currentMoveNumber, currentFen, boardHandle.current]);
 
   return {
     Board: <BoardComponent id={id} ref={boardHandle} animated={animated} />,
