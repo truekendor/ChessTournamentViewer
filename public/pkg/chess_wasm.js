@@ -1,9 +1,9 @@
 /* @ts-self-types="./chess_wasm.d.ts" */
 
-export class ChessInterfaceJS {
+export class WasmChess {
     static __wrap(ptr) {
         ptr = ptr >>> 0;
-        const obj = Object.create(ChessInterfaceJS.prototype);
+        const obj = Object.create(WasmChess.prototype);
         obj.__wbg_ptr = ptr;
         ChessInterfaceJSFinalization.register(obj, obj.__wbg_ptr, obj);
         return obj;
@@ -30,11 +30,11 @@ export class ChessInterfaceJS {
         }
     }
     /**
-     * @returns {ChessInterfaceJS}
+     * @returns {WasmChess}
      */
     static new() {
         const ret = wasm.chessinterfacejs_new();
-        return ChessInterfaceJS.__wrap(ret);
+        return WasmChess.__wrap(ret);
     }
     /**
      * @param {string[]} uci_moves
@@ -73,7 +73,7 @@ export class ChessInterfaceJS {
         return v3;
     }
 }
-if (Symbol.dispose) ChessInterfaceJS.prototype[Symbol.dispose] = ChessInterfaceJS.prototype.free;
+if (Symbol.dispose) WasmChess.prototype[Symbol.dispose] = WasmChess.prototype.free;
 
 function __wbg_get_imports() {
     const import0 = {

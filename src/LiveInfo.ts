@@ -2,7 +2,7 @@ import type { DrawShape } from "@lichess-org/chessground/draw";
 import { Chess960, type Color, type Square } from "./chess.js/chess";
 import type { CCCEngine, CCCLiveInfo } from "./types";
 import { sanToUci, uciToSan } from "./utils";
-import type { ChessInterfaceJS } from "../public/pkg/chess_wasm";
+import type { WasmChess } from "../public/pkg/chess_wasm";
 
 export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
@@ -209,10 +209,7 @@ function extractLiveInfoFromTCECGame(game: Chess960) {
   return { liveInfosWhite, liveInfosBlack };
 }
 
-export function extractLiveInfoFromGame(
-  game: Chess960,
-  chessWasm: ChessInterfaceJS
-) {
+export function extractLiveInfoFromGame(game: Chess960, chessWasm: WasmChess) {
   if (game.getHeaders()["Site"]?.includes("tcec"))
     return extractLiveInfoFromTCECGame(game);
 

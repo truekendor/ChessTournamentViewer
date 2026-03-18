@@ -1,12 +1,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export class ChessInterfaceJS {
+export class WasmChess {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
     make_move(uci_move_str: string): void;
-    static new(): ChessInterfaceJS;
+    static new(): WasmChess;
     uci_pv_to_san(uci_moves: string[], starting_fen?: string | null): string[];
     uci_to_san(uci_moves: string[], starting_fen?: string | null): string[];
 }

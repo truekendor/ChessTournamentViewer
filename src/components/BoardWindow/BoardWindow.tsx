@@ -18,7 +18,7 @@ import { GameResultOverlay } from "./GameResultOverlay";
 import { useKibitzer } from "../../hooks/useKibitzer";
 import { LiveMoveList } from "./LiveMoveList";
 import { useMediaQuery } from "react-responsive";
-import { ChessInterfaceJS } from "../../../public/pkg/chess_wasm";
+import { WasmChess } from "../../../public/pkg/chess_wasm";
 
 const isTCEC = window.location.search.includes("tcec");
 const _initialWS = isTCEC ? new TCECWebSocket() : new CCCWebSocket();
@@ -79,7 +79,7 @@ export const BoardWindow = memo(() => {
 
           // Load white + black engine live info
 
-          const chessWasm = ChessInterfaceJS.new();
+          const chessWasm = WasmChess.new();
 
           const { liveInfosBlack, liveInfosWhite } = extractLiveInfoFromGame(
             game,
