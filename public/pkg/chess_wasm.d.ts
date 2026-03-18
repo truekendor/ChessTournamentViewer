@@ -5,7 +5,6 @@ export class WasmChess {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    make_move(uci_move_str: string): void;
     static new(): WasmChess;
     uci_pv_to_san(uci_moves: string[], starting_fen?: string | null): string[];
     uci_to_san(uci_moves: string[], starting_fen?: string | null): string[];
@@ -15,16 +14,15 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly __wbg_chessinterfacejs_free: (a: number, b: number) => void;
-    readonly chessinterfacejs_make_move: (a: number, b: number, c: number) => [number, number];
-    readonly chessinterfacejs_new: () => number;
-    readonly chessinterfacejs_uci_pv_to_san: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
-    readonly chessinterfacejs_uci_to_san: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly __wbg_wasmchess_free: (a: number, b: number) => void;
+    readonly wasmchess_new: () => number;
+    readonly wasmchess_uci_pv_to_san: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly wasmchess_uci_to_san: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __externref_table_dealloc: (a: number) => void;
     readonly __externref_table_alloc: () => number;
+    readonly __externref_table_dealloc: (a: number) => void;
     readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;

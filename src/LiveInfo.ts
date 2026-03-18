@@ -238,9 +238,14 @@ export function extractLiveInfoFromGame(game: Chess960, chessWasm: WasmChess) {
 
     let sanPv = "";
     if (fenBeforeMove) {
-      sanPv = chessWasm
-        .uci_to_san(pvString.split(" "), fenBeforeMove)
-        .join(" ");
+      try {
+        sanPv = chessWasm
+          .uci_to_san(pvString.trim().split(" "), fenBeforeMove)
+          .join(" ");
+      } catch (err) {
+        console.log(err);
+        sanPv = uciToSan(fenBeforeMove, pvString.split(" ")).join(" ");
+      }
     } else {
       sanPv = uciToSan(fenBeforeMove, pvString.split(" ")).join(" ");
     }

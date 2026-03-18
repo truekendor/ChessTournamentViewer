@@ -5,35 +5,24 @@ export class WasmChess {
         ptr = ptr >>> 0;
         const obj = Object.create(WasmChess.prototype);
         obj.__wbg_ptr = ptr;
-        ChessInterfaceJSFinalization.register(obj, obj.__wbg_ptr, obj);
+        WasmChessFinalization.register(obj, obj.__wbg_ptr, obj);
         return obj;
     }
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
-        ChessInterfaceJSFinalization.unregister(this);
+        WasmChessFinalization.unregister(this);
         return ptr;
     }
     free() {
         const ptr = this.__destroy_into_raw();
-        wasm.__wbg_chessinterfacejs_free(ptr, 0);
-    }
-    /**
-     * @param {string} uci_move_str
-     */
-    make_move(uci_move_str) {
-        const ptr0 = passStringToWasm0(uci_move_str, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.chessinterfacejs_make_move(this.__wbg_ptr, ptr0, len0);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
-        }
+        wasm.__wbg_wasmchess_free(ptr, 0);
     }
     /**
      * @returns {WasmChess}
      */
     static new() {
-        const ret = wasm.chessinterfacejs_new();
+        const ret = wasm.wasmchess_new();
         return WasmChess.__wrap(ret);
     }
     /**
@@ -46,7 +35,7 @@ export class WasmChess {
         const len0 = WASM_VECTOR_LEN;
         var ptr1 = isLikeNone(starting_fen) ? 0 : passStringToWasm0(starting_fen, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len1 = WASM_VECTOR_LEN;
-        const ret = wasm.chessinterfacejs_uci_pv_to_san(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        const ret = wasm.wasmchess_uci_pv_to_san(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         if (ret[3]) {
             throw takeFromExternrefTable0(ret[2]);
         }
@@ -64,7 +53,7 @@ export class WasmChess {
         const len0 = WASM_VECTOR_LEN;
         var ptr1 = isLikeNone(starting_fen) ? 0 : passStringToWasm0(starting_fen, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len1 = WASM_VECTOR_LEN;
-        const ret = wasm.chessinterfacejs_uci_to_san(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        const ret = wasm.wasmchess_uci_to_san(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         if (ret[3]) {
             throw takeFromExternrefTable0(ret[2]);
         }
@@ -113,9 +102,9 @@ function __wbg_get_imports() {
     };
 }
 
-const ChessInterfaceJSFinalization = (typeof FinalizationRegistry === 'undefined')
+const WasmChessFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_chessinterfacejs_free(ptr >>> 0, 1));
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmchess_free(ptr >>> 0, 1));
 
 function addToExternrefTable0(obj) {
     const idx = wasm.__externref_table_alloc();
