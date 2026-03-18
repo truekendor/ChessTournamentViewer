@@ -20,6 +20,7 @@ type MoveListProps = {
   downloadURL?: string;
   currentMoveNumber: number;
   moveNumberOffset?: number;
+  bookMoves?: number;
   setCurrentMoveNumber: (callback: (previous: number) => number) => void;
   controllers: boolean;
   disagreementMoveIndex?: number;
@@ -42,11 +43,12 @@ export function getGameAtMoveNumber(
   return game;
 }
 
-function moveClass(active: boolean, disagreement: boolean) {
+function moveClass(active: boolean, disagreement: boolean, bookMove: boolean) {
   return (
     "move" +
     (active ? " currentMove" : "") +
-    (disagreement ? " disagreementMove" : "")
+    (disagreement ? " disagreementMove" : "") +
+    (bookMove ? " bookMove" : "")
   );
 }
 
@@ -69,6 +71,7 @@ const MoveList = memo(
     controllers,
     disagreementMoveIndex,
     moveNumberOffset = 0,
+    bookMoves = -1,
   }: MoveListProps) => {
     const moveListRef = useRef<HTMLDivElement>(null);
 
@@ -192,6 +195,8 @@ const MoveList = memo(
           rowActive={whiteActive}
           disagreementWhite={disagreementMoveIndex === i}
           disagreementBlack={disagreementMoveIndex === i + 1}
+          bookMoveWhite={i < bookMoves}
+          bookMoveBlack={i + 1 < bookMoves}
           setCurrentMoveNumber={setCurrentMoveNumber}
         />
       );
@@ -222,7 +227,8 @@ const MoveList = memo(
                         <span
                           className={moveClass(
                             active,
-                            disagreementMoveIndex === 0
+                            disagreementMoveIndex === 0,
+                            false
                           )}
                           onClick={() => setCurrentMoveNumber(() => 1)}
                         >
@@ -319,6 +325,8 @@ type MoveRowProps = {
   rowActive: boolean;
   disagreementWhite: boolean;
   disagreementBlack: boolean;
+  bookMoveWhite: boolean;
+  bookMoveBlack: boolean;
   setCurrentMoveNumber: (callback: (n: number) => number) => void;
 };
 
@@ -333,6 +341,8 @@ const MoveRow = memo(
     rowActive,
     disagreementWhite,
     disagreementBlack,
+    bookMoveWhite,
+    bookMoveBlack,
     setCurrentMoveNumber,
   }: MoveRowProps) => {
     return (
@@ -344,7 +354,7 @@ const MoveRow = memo(
           {moveNumber}.
         </th>
         <td
-          className={moveClass(whiteActive, disagreementWhite)}
+          className={moveClass(whiteActive, disagreementWhite, bookMoveWhite)}
           onClick={() => setCurrentMoveNumber(() => moveIndex + 1)}
         >
           {whiteMove}
@@ -352,7 +362,11 @@ const MoveRow = memo(
         <td>
           {blackMove && (
             <span
-              className={moveClass(blackActive, disagreementBlack)}
+              className={moveClass(
+                blackActive,
+                disagreementBlack,
+                bookMoveBlack
+              )}
               onClick={() => setCurrentMoveNumber(() => moveIndex + 2)}
             >
               {blackMove}

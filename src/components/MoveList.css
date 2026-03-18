@@ -39,6 +39,14 @@
   color: #ddd;
 }
 
+.moveList .disagreementMove {
+  color: #e53935;
+}
+
+.moveList .bookMove {
+  color: #6699ff;
+}
+
 .moveList .currentMove {
   color: #fff;
 }
@@ -99,10 +107,6 @@
   justify-content: center;
   position: relative;
   width: 100%;
-}
-
-.moveList .disagreementMove {
-  color: #e53935;
 }
 
 @media (max-width: 1150px) {
