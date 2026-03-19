@@ -10,11 +10,15 @@ export interface TournamentWebSocket {
   send: (msg: unknown) => void;
 }
 
+const TIMEOUT_RECONNECT_MS = 5000;
+
 export class CCCWebSocket implements TournamentWebSocket {
   private url: string = "wss://ccc-api.gcp-prod.chess.com/ws";
   private socket: WebSocket | null = null;
 
   private callback: (message: CCCMessage) => void = () => {};
+
+  private timeoutId: number | undefined = undefined;
 
   connect(onMessage: (message: CCCMessage) => void) {
     if (this.isConnected()) {
@@ -29,8 +33,20 @@ export class CCCWebSocket implements TournamentWebSocket {
       this.send({ type: "requestEventsListUpdate" });
     };
 
+    this.timeoutId = setTimeout(() => {
+      this.disconnect();
+      this.connect(this.callback);
+    }, TIMEOUT_RECONNECT_MS);
+
     this.socket.onmessage = (e) => {
       const messages = JSON.parse(e.data) as CCCMessage[];
+
+      const hasGameUpdate = messages.some(
+        (message) => message.type === "gameUpdate"
+      );
+      if (hasGameUpdate) {
+        clearTimeout(this.timeoutId)
+      }
 
       const lastLiveInfoIdx = messages.findLastIndex(
         (message) => message.type === "liveInfo"
