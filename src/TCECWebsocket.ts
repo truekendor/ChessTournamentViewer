@@ -297,17 +297,14 @@ export class TCECWebSocket implements TournamentWebSocket {
       },
     });
 
-    let comments = this.game.getComments();
-    const gameStartIndex = comments.findIndex(
-      (_, index, list) =>
-        list[index + 1] &&
-        list[index + 1].comment &&
-        !list[index + 1].comment?.includes("book")
-    );
-    comments = comments.slice(gameStartIndex);
+    function plyFromPv(pv: string) {
+      const isBlackMove = pv.includes("...");
+      const moveNumber = Number(pv.split(".")[0]);
+      if (isBlackMove) return moveNumber * 2;
+      return moveNumber * 2 - 1;
+    }
 
-    (lc0.moves as any[]).forEach((lc0Move, i) => {
-      if (!comments[i]) return;
+    (lc0.moves as any[]).forEach((lc0Move) => {
       if (lc0Move.pv.includes("...")) {
         if (typeof lc0Move.eval === "string") {
           if (lc0Move.eval.startsWith("-"))
@@ -317,10 +314,13 @@ export class TCECWebSocket implements TournamentWebSocket {
           lc0Move.eval *= -1;
         }
       }
-      this.callback?.(parseTCECLiveInfo(lc0Move, comments[i].fen, "blue"));
+
+      const ply = plyFromPv(lc0Move.pv);
+      this.callback?.(
+        parseTCECLiveInfo(lc0Move, this.game.fenAt(ply - 1), "blue")
+      );
     });
-    (sf.moves as any[]).forEach((sfMove, i) => {
-      if (!comments[i]) return;
+    (sf.moves as any[]).forEach((sfMove) => {
       if (sfMove.pv.includes("...")) {
         if (typeof sfMove.eval === "string") {
           if (sfMove.eval.startsWith("-"))
@@ -330,7 +330,11 @@ export class TCECWebSocket implements TournamentWebSocket {
           sfMove.eval *= -1;
         }
       }
-      this.callback?.(parseTCECLiveInfo(sfMove, comments[i].fen, "red"));
+
+      const ply = plyFromPv(sfMove.pv);
+      this.callback?.(
+        parseTCECLiveInfo(sfMove, this.game.fenAt(ply - 1), "red")
+      );
     });
   }
 
