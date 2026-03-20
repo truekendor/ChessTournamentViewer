@@ -25,62 +25,91 @@ export class TCECWebSocket implements TournamentWebSocket {
   private game: Chess960 = new Chess960();
   private event: CCCEventUpdate | null = null;
 
-  send(msg: any) {
+  async send(msg: any) {
     if (msg.type === "requestEvent") {
       const gameNr: string | undefined = msg.gameNr;
       const eventNr: string | undefined = msg.eventNr;
 
-      if (gameNr) {
+      if (eventNr) {
+        this.live = false;
+
+        // This code needs to distinguish a bunch of cases
+        const [pgnResponse, crosstableResponse] = await Promise.all([
+          fetch(
+            `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_${gameNr ?? 1}.pgn`
+          ),
+          fetch(`https://ctv.yoshie2000.de/tcec/crosstable.json`),
+        ]);
+        const pgn = await pgnResponse.text();
+        const crosstable = await crosstableResponse.json();
+
+        const game = new Chess960();
+        try {
+          game.loadPgn(pgn);
+        } catch (error) {
+          // The backend threw a 404, which means this is a live game
+          this.send({ type: "requestEvent" });
+          return;
+        }
+
+        // Round is needed for the kibitzer endpoints
+        const round = game.getHeaders()["Round"];
+        // The schedule link is different for the ongoing event
+        const isLive = crosstable.Event.replaceAll(" ", "_") === eventNr;
+
+        const scheduleLink = isLive
+          ? "https://ctv.yoshie2000.de/tcec/schedule.json"
+          : `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_Schedule.sjson`;
+        this.openEvent(
+          scheduleLink,
+          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_Crosstable.cjson`,
+          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_${gameNr ?? 1}.pgn`,
+          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr.toLowerCase()}_liveeval_${round}.json`,
+          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr.toLowerCase()}_liveeval1_${round}.json`
+        );
+      } else if (gameNr) {
         const safeEventNr = (eventNr ?? this.game.getHeaders()["Event"])
           .replaceAll(" ", "_")
           .replaceAll("DivP", "Divp");
-        fetch(
-          `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr}_${gameNr}.pgn`
-        )
-          .then((response) => response.text())
-          .then((pgn) => {
-            this.live = false;
-            this.openGame(pgn);
-
-            const game = new Chess960();
-            game.loadPgn(pgn);
-            const round = game.getHeaders()["Round"];
-
-            return Promise.all([
-              fetch(
-                `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr.toLowerCase()}_liveeval_${round}.json`
-              ),
-              fetch(
-                `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr.toLowerCase()}_liveeval1_${round}.json`
-              ),
-            ]);
-          })
-          .then((responses) =>
-            Promise.all([responses[0].json(), responses[1].json()])
+        const pgn = await (
+          await fetch(
+            `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr}_${gameNr}.pgn`
           )
-          .then((responses) => {
-            const [lc0, sf] = responses;
-            this.loadKibitzerData(lc0, sf);
-          });
-      } else if (!gameNr && !eventNr) {
+        ).text();
+        this.live = false;
+        this.openGame(pgn);
+
+        const game = new Chess960();
+        game.loadPgn(pgn);
+        const round = game.getHeaders()["Round"];
+
+        const [lc0Response, sfResponse] = await Promise.all([
+          fetch(
+            `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr.toLowerCase()}_liveeval_${round}.json`
+          ),
+          fetch(
+            `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr.toLowerCase()}_liveeval1_${round}.json`
+          ),
+        ]);
+
+        this.loadKibitzerData(
+          await lc0Response.json(),
+          await sfResponse.json()
+        );
+      } else {
         this.disconnect();
         this.connect(this.callback ?? function () {});
-      } else if (eventNr) {
-        this.live = false;
-        this.openEvent(
-          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_Schedule.sjson`,
-          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_Crosstable.cjson`,
-          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr}_1.pgn`,
-          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr.toLowerCase()}_liveeval_1.1.json`,
-          `https://ctv.yoshie2000.de/tcec/archive/json/${eventNr.toLowerCase()}_liveeval1_1.1.json`
-        );
       }
     } else {
       console.log("NOT IMPLEMENTED FOR TCECWebsocket: ", msg);
     }
   }
 
-  connect(onMessage: (message: CCCMessage) => void, initialEventId?: string) {
+  connect(
+    onMessage: (message: CCCMessage) => void,
+    initialEventId?: string,
+    initialGameId?: string
+  ) {
     this.callback = onMessage;
     if (this.isConnected()) return;
     this.connected = true;
@@ -225,9 +254,13 @@ export class TCECWebSocket implements TournamentWebSocket {
       this.socket?.emit("room", "roomall");
     });
 
-    if (initialEventId) {
+    if (initialEventId || initialGameId) {
       this.live = false;
-      this.send({ type: "requestEvent", eventNr: initialEventId });
+      this.send({
+        type: "requestEvent",
+        eventNr: initialEventId,
+        gameNr: initialGameId,
+      });
     } else {
       this.openEvent(
         "https://ctv.yoshie2000.de/tcec/schedule.json",
