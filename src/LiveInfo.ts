@@ -2,7 +2,7 @@ import type { DrawShape } from "@lichess-org/chessground/draw";
 import { Chess960, type Color, type Square } from "./chess.js/chess";
 import type { CCCEngine, CCCLiveInfo } from "./types";
 import { sanToUci, uciToSan } from "./utils";
-import { movesToSan } from "labut";
+import { movesToLan } from "labut";
 
 export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
@@ -52,7 +52,6 @@ export function parseTCECLiveInfo(
     : Number(json.pv.split(".")[0]);
   const ply = 2 * (fullmove - 1) + (blackToMove ? 1 : 0);
 
-  const tmpGame = new Chess960(fen);
   const pvMoves = json.pv
     .split(/ |\.\.\./)
     .filter((str: string) => !str.match(/^\d+\.?$/));
