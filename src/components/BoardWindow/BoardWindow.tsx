@@ -208,6 +208,15 @@ export const BoardWindow = memo(() => {
           liveInfoState.setMoves(game.history());
           updateBoard(true);
 
+          if (currentSelectedGameNumber) {
+            useGameHistory
+              .getState()
+              .setFenListForGame(
+                currentSelectedGameNumber,
+                game.boardFenHistory()
+              );
+          }
+
           break;
         }
 
