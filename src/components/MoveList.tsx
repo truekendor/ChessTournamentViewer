@@ -13,6 +13,7 @@ import {
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
+import type { AgreementMove } from "@/context/GameHistoryContext";
 
 type MoveListProps = {
   startFen: string;
@@ -24,7 +25,7 @@ type MoveListProps = {
   setCurrentMoveNumber: (callback: (previous: number) => number) => void;
   controllers: boolean;
   disagreementMoveIndex?: number;
-  transpositions?: number[];
+  transpositions?: AgreementMove[];
 };
 
 export function getGameAtMoveNumber(
@@ -172,6 +173,8 @@ const MoveList = memo(
       window.open(downloadURL, "_blank");
     }
 
+    console.log(transpositions);
+
     const rows = [];
     for (let i = pairStart; i < moves.length; i += 2) {
       const whiteMove = moves[i];
@@ -184,6 +187,17 @@ const MoveList = memo(
         currentMoveNumber === i + 1 || (isLatest && i === moves.length - 1);
       const blackActive =
         currentMoveNumber === i + 2 || (isLatest && i + 1 === moves.length - 1);
+
+      let whiteAgree: AgreementMove | null = null;
+      let blackAgree: AgreementMove | null = null;
+
+      transpositions?.forEach((el) => {
+        if (el.moveNumber === i + 1) {
+          whiteAgree = el;
+        } else if (el.moveNumber === i + 2) {
+          blackAgree = el;
+        }
+      });
 
       rows.push(
         <MoveRow
@@ -199,8 +213,8 @@ const MoveList = memo(
           bookMoveWhite={i < bookMoves}
           bookMoveBlack={i + 1 < bookMoves}
           setCurrentMoveNumber={setCurrentMoveNumber}
-          whiteAgree={transpositions?.includes(i + 1) ?? false}
-          blackAgree={transpositions?.includes(i + 2) ?? false}
+          whiteAgree={whiteAgree}
+          blackAgree={blackAgree}
         />
       );
     }
@@ -330,8 +344,8 @@ type MoveRowProps = {
   bookMoveWhite: boolean;
   bookMoveBlack: boolean;
   setCurrentMoveNumber: (callback: (n: number) => number) => void;
-  whiteAgree?: boolean;
-  blackAgree?: boolean;
+  whiteAgree?: AgreementMove | null;
+  blackAgree?: AgreementMove | null;
 };
 
 const MoveRow = memo(
@@ -346,8 +360,8 @@ const MoveRow = memo(
     disagreementBlack,
     bookMoveWhite,
     bookMoveBlack,
-    whiteAgree = false,
-    blackAgree = false,
+    whiteAgree = null,
+    blackAgree = null,
     setCurrentMoveNumber,
   }: MoveRowProps) => {
     return (
@@ -362,20 +376,23 @@ const MoveRow = memo(
           {moveNumber}.
         </th>
         <td
+          title={`${whiteAgree?.diverge ? `Deviated at: ${whiteAgree.diverge}` : ""}`}
           className={
             moveClass(whiteActive, disagreementWhite, bookMoveWhite) +
-            ` ${whiteAgree ? "agree" : ""}`
+            ` ${whiteAgree?.moveNumber ? "agree" : ""}`
           }
           onClick={() => setCurrentMoveNumber(() => moveIndex + 1)}
         >
           {whiteMove}
         </td>
-        <td>
+        <td
+          title={`${blackAgree?.diverge ? `Deviated at: ${blackAgree.diverge}` : ""}`}
+        >
           {blackMove && (
             <span
               className={
                 moveClass(blackActive, disagreementBlack, bookMoveBlack) +
-                ` ${blackAgree ? "agree" : ""}`
+                ` ${blackAgree?.moveNumber ? "agree" : ""}`
               }
               onClick={() => setCurrentMoveNumber(() => moveIndex + 2)}
             >

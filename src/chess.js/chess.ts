@@ -2699,14 +2699,22 @@ export class Chess {
     return moveHistory
   }
 
-  boardFenHistory(): string[] {
-    return this._history.map((el) => (
-      this._trimFen(el.fen)
+  boardFenHistory(): {
+    fenList:  string[];
+    moveList: string[];
+  } {
+    const fenList = this._history.map((el) => (
+        this._trimFen(el.fen)
     ))
+
+    return {
+      fenList,
+      moveList: this.history()
+    }
   }
 
   private _trimFen(fen: string): string {
-    return fen.split(" ").slice(0, 4).join(" ");
+    return fen.split(" ").slice(0, 3).join(" ");
   }
 
   /*
