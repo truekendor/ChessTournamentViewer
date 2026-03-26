@@ -19,7 +19,10 @@ import { GameResultOverlay } from "./GameResultOverlay";
 import { useKibitzer } from "../../hooks/useKibitzer";
 import { LiveMoveList } from "./LiveMoveList";
 import { useMediaQuery } from "react-responsive";
-import { useGameHistory } from "@/context/GameHistoryContext";
+import {
+  useGameHistory,
+  type AgreementMove,
+} from "@/context/GameHistoryContext";
 
 const wsByProvider = {
   ccc: new CCCWebSocket(),
@@ -100,19 +103,37 @@ export const BoardWindow = memo(() => {
         ? currentSelectedGameNumber - 1
         : currentSelectedGameNumber + 1;
 
-    const currentFenList = history[currentSelectedGameNumber];
-    const reversedFenList = history[reverseGameNumber];
+    const currentFenList = history[currentSelectedGameNumber]?.fenList;
+    const reverseGameFenList = history[reverseGameNumber]?.fenList;
+    const reverseGameMoveList = history[reverseGameNumber]?.moveList;
 
-    if (!currentFenList || !reversedFenList) {
+    if (!currentFenList || !reverseGameFenList || !reverseGameMoveList) {
       return;
     }
 
-    const reversedFenListSet = new Set(reversedFenList);
-    const samePositionsList: number[] = [];
+    const _dev_map = new Map<string, number>();
+    const samePositionsList: AgreementMove[] = [];
 
-    currentFenList.forEach((fen, i) => {
-      if (reversedFenListSet.has(fen)) {
-        samePositionsList.push(i);
+    reverseGameFenList.forEach((fen, i) => {
+      _dev_map.set(fen, i);
+    });
+
+    let wasSamePosition = false;
+    currentFenList.forEach((fen, i, array) => {
+      if (_dev_map.has(fen)) {
+        samePositionsList.push({ moveNumber: i });
+
+        wasSamePosition = true;
+      } else if (wasSamePosition) {
+        const prevFen = array[i - 1];
+        const divergeMoveIndex = reverseGameFenList.findLastIndex(
+          (val) => prevFen === val
+        );
+        const move = reverseGameMoveList[divergeMoveIndex];
+
+        wasSamePosition = false;
+
+        samePositionsList[samePositionsList.length - 1].diverge = move;
       }
     });
 
