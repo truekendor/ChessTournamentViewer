@@ -51,6 +51,7 @@ export const BoardWindow = memo(() => {
   const activeGameNumber = useEventStore((state) =>
     Number(state.activeGame?.gameDetails.gameNr)
   );
+  const waitingSet = useGameHistory((state) => state.waitingSet);
 
   const game = useLiveInfo((state) => state.game);
 
@@ -95,26 +96,6 @@ export const BoardWindow = memo(() => {
 
   // TODO move out of this component
   useEffect(() => {
-    const firstGameNumberOfTheEvent: number | null =
-      Number(activeEvent?.tournamentDetails.schedule.past[0].gameNr) ||
-      Number(activeEvent?.tournamentDetails.schedule.present?.gameNr) ||
-      null;
-
-    if (!activeGameNumber || !firstGameNumberOfTheEvent) {
-      return;
-    }
-
-    const isFirstGameNumberEven = firstGameNumberOfTheEvent % 2 === 0;
-    const isCurrentGameNumberEven = activeGameNumber % 2 === 0;
-
-    const direction = isFirstGameNumberEven ? 1 : -1;
-    const reverseGameNumber =
-      activeGameNumber + (isCurrentGameNumberEven ? direction : -direction);
-
-    const currentFenList = gameDataMap[activeGameNumber]?.fenList;
-    const reverseGameFenList = gameDataMap[reverseGameNumber]?.fenList;
-    const reverseGameMoveList = gameDataMap[reverseGameNumber]?.moveList;
-
     const fetchReverse = async (gameNumber: number) => {
       try {
         const reverseData =
@@ -137,46 +118,74 @@ export const BoardWindow = memo(() => {
       }
     };
 
-    if (!reverseGameFenList || !reverseGameMoveList) {
-      fetchReverse(Number(activeGameNumber));
-      return;
-    }
+    const handleStuff = async () => {
+      const firstGameNumberOfTheEvent: number | null =
+        Number(activeEvent?.tournamentDetails.schedule.past[0].gameNr) ||
+        Number(activeEvent?.tournamentDetails.schedule.present?.gameNr) ||
+        null;
 
-    if (!currentFenList) {
-      return;
-    }
-
-    const fenSet = new Set<string>(reverseGameFenList);
-    const samePositionsList: TranspositionDataEntry[] = [];
-
-    let wasSamePosition = false;
-    currentFenList.forEach((fen, i, array) => {
-      if (fenSet.has(fen)) {
-        samePositionsList.push({ moveNumber: i });
-
-        wasSamePosition = true;
-      } else if (wasSamePosition) {
-        const prevFen = array[i - 1];
-        const divergeMoveIndex = reverseGameFenList.findLastIndex(
-          (val) => prevFen === val
-        );
-        const move = reverseGameMoveList[divergeMoveIndex];
-
-        wasSamePosition = false;
-
-        samePositionsList.push({ moveNumber: i, diverge: move });
+      if (!activeGameNumber || !firstGameNumberOfTheEvent) {
+        return;
       }
-    });
 
-    console.log(samePositionsList);
+      const isFirstGameNumberEven = firstGameNumberOfTheEvent % 2 === 0;
+      const isCurrentGameNumberEven = activeGameNumber % 2 === 0;
 
-    setOverlappingMovesIndxList(activeGameNumber, samePositionsList);
+      const direction = isFirstGameNumberEven ? 1 : -1;
+      const reverseGameNumber =
+        activeGameNumber + (isCurrentGameNumberEven ? direction : -direction);
+
+      const currentFenList = gameDataMap[activeGameNumber]?.fenList;
+      const reverseGameFenList = gameDataMap[reverseGameNumber]?.fenList;
+      const reverseGameMoveList = gameDataMap[reverseGameNumber]?.moveList;
+
+      if (
+        !waitingSet.has(reverseGameNumber) &&
+        (!reverseGameFenList || !reverseGameMoveList)
+      ) {
+        useGameHistory.getState().setWaiting(reverseGameNumber);
+
+        await fetchReverse(Number(activeGameNumber));
+        return;
+      }
+
+      if (!currentFenList) {
+        return;
+      }
+
+      const fenSet = new Set<string>(reverseGameFenList);
+      const samePositionsList: TranspositionDataEntry[] = [];
+
+      let wasSamePosition = false;
+      currentFenList.forEach((fen, i, array) => {
+        if (fenSet.has(fen)) {
+          samePositionsList.push({ moveNumber: i });
+
+          wasSamePosition = true;
+        } else if (wasSamePosition) {
+          const prevFen = array[i - 1];
+          const divergeMoveIndex = reverseGameFenList.findLastIndex(
+            (val) => prevFen === val
+          );
+          const move = reverseGameMoveList[divergeMoveIndex];
+
+          wasSamePosition = false;
+
+          samePositionsList.push({ moveNumber: i, diverge: move });
+        }
+      });
+
+      setOverlappingMovesIndxList(activeGameNumber, samePositionsList);
+    };
+
+    handleStuff();
   }, [
     activeEvent?.tournamentDetails.schedule.past,
     activeEvent?.tournamentDetails.schedule.present?.gameNr,
     activeGameNumber,
     gameDataMap,
     setOverlappingMovesIndxList,
+    waitingSet,
   ]);
 
   const handleMessage = useCallback(
