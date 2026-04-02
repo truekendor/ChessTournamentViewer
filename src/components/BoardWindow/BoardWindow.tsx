@@ -1,26 +1,33 @@
 import { memo, useCallback, useEffect, useRef } from "react";
-import { useLiveBoard } from "@/hooks/BoardHook";
+import { useMediaQuery } from "react-responsive";
+
 import { useEventStore } from "@/context/EventContext";
 import { useLiveInfo } from "@/context/LiveInfoContext";
+import { useGameHistory } from "@/context/GameHistoryContext";
+
+import { useLiveBoard } from "@/hooks/BoardHook";
+import { useKibitzer } from "@/hooks/useKibitzer";
+import { useRequestReverse } from "@/hooks/useRequestReverse";
+
 import { TCECWebSocket } from "@/TCECWebsocket";
 import { CCCWebSocket, type TournamentWebSocket } from "@/CCCWebsocket";
-import type { CCCLiveInfo, CCCMessage } from "@/types";
+
 import {
   EmptyEngineDefinition,
   extractLiveInfoFromGame,
   getTimeControl,
   type EngineColor,
 } from "@/LiveInfo";
+
+import { GameResultOverlay } from "./GameResultOverlay";
+import { LiveMoveList } from "./LiveMoveList";
+import { EngineMinimal } from "../EngineWindow/EngineMinimal";
+
 import { loadLiveInfos } from "@/LocalStorage";
 import { type Square } from "@/chess.js/chess";
 import { uciToSan } from "@/utils";
-import { EngineMinimal } from "../EngineWindow/EngineMinimal";
-import { GameResultOverlay } from "./GameResultOverlay";
-import { useKibitzer } from "@/hooks/useKibitzer";
-import { LiveMoveList } from "./LiveMoveList";
-import { useMediaQuery } from "react-responsive";
-import { useGameHistory } from "@/context/GameHistoryContext";
-import { useRequestReverse } from "@/hooks/useRequestReverse";
+
+import type { CCCLiveInfo, CCCMessage } from "@/types";
 
 const wsByProvider = {
   ccc: new CCCWebSocket(),
