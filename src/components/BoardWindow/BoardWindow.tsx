@@ -59,7 +59,7 @@ export const BoardWindow = memo(() => {
   const initialGame = useRef<string | null>(_initialGame);
 
   const gameDataMap = useGameHistory((state) => state.gameDataMap);
-  const setOverlappingMovesIndxList = useGameHistory(
+  const setTranspositionsList = useGameHistory(
     (state) => state.setTranspositions
   );
 
@@ -175,7 +175,7 @@ export const BoardWindow = memo(() => {
         }
       });
 
-      setOverlappingMovesIndxList(activeGameNumber, samePositionsList);
+      setTranspositionsList(activeGameNumber, samePositionsList);
     };
 
     handleStuff();
@@ -184,7 +184,7 @@ export const BoardWindow = memo(() => {
     activeEvent?.tournamentDetails.schedule.present?.gameNr,
     activeGameNumber,
     gameDataMap,
-    setOverlappingMovesIndxList,
+    setTranspositionsList,
     waitingSet,
   ]);
 
