@@ -1,28 +1,25 @@
 import { memo, useCallback, useEffect, useRef } from "react";
-import { useLiveBoard } from "../../hooks/BoardHook";
-import { useEventStore } from "../../context/EventContext";
-import { useLiveInfo } from "../../context/LiveInfoContext";
-import { TCECWebSocket } from "../../TCECWebsocket";
-import { CCCWebSocket, type TournamentWebSocket } from "../../CCCWebsocket";
-import type { CCCLiveInfo, CCCMessage } from "../../types";
+import { useLiveBoard } from "@/hooks/BoardHook";
+import { useEventStore } from "@/context/EventContext";
+import { useLiveInfo } from "@/context/LiveInfoContext";
+import { TCECWebSocket } from "@/TCECWebsocket";
+import { CCCWebSocket, type TournamentWebSocket } from "@/CCCWebsocket";
+import type { CCCLiveInfo, CCCMessage } from "@/types";
 import {
   EmptyEngineDefinition,
   extractLiveInfoFromGame,
   getTimeControl,
   type EngineColor,
-} from "../../LiveInfo";
-import { loadLiveInfos } from "../../LocalStorage";
-import { Chess960, type Square } from "@/chess.js/chess";
-import { uciToSan } from "../../utils";
+} from "@/LiveInfo";
+import { loadLiveInfos } from "@/LocalStorage";
+import { type Square } from "@/chess.js/chess";
+import { uciToSan } from "@/utils";
 import { EngineMinimal } from "../EngineWindow/EngineMinimal";
 import { GameResultOverlay } from "./GameResultOverlay";
-import { useKibitzer } from "../../hooks/useKibitzer";
+import { useKibitzer } from "@/hooks/useKibitzer";
 import { LiveMoveList } from "./LiveMoveList";
 import { useMediaQuery } from "react-responsive";
-import {
-  useGameHistory,
-  type TranspositionDataEntry,
-} from "@/context/GameHistoryContext";
+import { useGameHistory } from "@/context/GameHistoryContext";
 import { useRequestReverse } from "@/hooks/useRequestReverse";
 
 const wsByProvider = {
