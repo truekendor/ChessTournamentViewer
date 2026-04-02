@@ -148,9 +148,6 @@ export class TCECWebSocket implements TournamentWebSocket {
       const game = new Chess960();
       game.loadPgn(pgn);
 
-      console.log(reverseGameNumber);
-      console.log(game.boardFenHistory());
-
       return { pgn, reverseGameNumber };
     } catch (err) {
       console.log(err);
