@@ -176,7 +176,11 @@ const Schedule = memo(() => {
                 game.outcome || ongoingAndNotSelectedGame
                   ? () => {
                       userClickedRef.current = true;
-                      requestEvent(game.gameNr);
+                      if (window.location.search.includes("tcec")) {
+                        requestEvent();
+                      } else {
+                        requestEvent(game.gameNr);
+                      }
                     }
                   : undefined
               }
