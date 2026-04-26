@@ -31,8 +31,7 @@ export class TCECWebSocket implements TournamentWebSocket {
       let eventNr: string | undefined = msg.eventNr;
 
       if (eventNr) {
-        eventNr = eventNr.replace("AltSubfi", "Altsubfi");
-
+        eventNr = toTitleCaseTCEC(eventNr);
         // This code needs to distinguish a bunch of cases
         const [pgnResponse, crosstableResponse, scheduleResponse] =
           await Promise.all([
@@ -60,7 +59,9 @@ export class TCECWebSocket implements TournamentWebSocket {
         // Round is needed for the kibitzer endpoints
         const round = game.getHeaders()["Round"];
         // The schedule link is different for the ongoing event
-        const isLive = crosstable.Event.replaceAll(" ", "_").toLowerCase() === eventNr.toLowerCase();
+        const isLive =
+          crosstable.Event.replaceAll(" ", "_").toLowerCase() ===
+          eventNr.toLowerCase();
 
         if (isLive && !gameNr) {
           this.send({
@@ -85,10 +86,10 @@ export class TCECWebSocket implements TournamentWebSocket {
           gameNr
         );
       } else if (gameNr) {
-        const safeEventNr = (eventNr ?? this.game.getHeaders()["Event"])
-          .replaceAll(" ", "_")
-          .replaceAll("DivP", "Divp")
-          .replaceAll("AltSubfi", "Altsubfi");
+        const safeEventNr = toTitleCaseTCEC(
+          eventNr ?? this.game.getHeaders()["Event"]
+        );
+
         const pgn = await (
           await fetch(
             `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr}_${gameNr}.pgn`
@@ -719,4 +720,17 @@ export class TCECWebSocket implements TournamentWebSocket {
     this.socket?.close();
     this.connected = false;
   }
+}
+
+function toTitleCaseTCEC(input: string): string {
+  return input
+    .split(" ")
+    .map((word, inx) => {
+      const isEmptyOrTCECStr = word.length === 0 || inx === 0;
+      if (isEmptyOrTCECStr) {
+        return word;
+      }
+      return word[0].toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join("_");
 }
