@@ -22,7 +22,7 @@ export function formatLargeNumber(value?: string) {
   if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
   if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
   if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
-  return String(x);
+  return x.toFixed(2);
 }
 
 export function formatTime(time: number) {
