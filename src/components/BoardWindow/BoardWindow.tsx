@@ -234,6 +234,21 @@ export const BoardWindow = memo(() => {
   }, []);
 
   useEffect(() => {
+    // If the tab was in the background and the websocket disconnected, reload the page
+    const onVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        !activeWSRef.current.isConnected()
+      ) {
+        window.location.reload();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  useEffect(() => {
     const eventState = useEventStore.getState();
     const eventList = eventState.providerData[activeProvider]?.eventList;
     if (!activeEvent || !eventList || eventState.pendingEventId) return;
