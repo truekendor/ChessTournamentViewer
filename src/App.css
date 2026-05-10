@@ -274,9 +274,13 @@
     gap: 0.5rem;
   }
 
+  .engineWindow,
+  .engineWindowMobile {
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+  }
+
   .engineWindow {
-    grid-column: 3 / 4;
-    grid-row: 2 / 4;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: 1fr;
     gap: 0.5rem;

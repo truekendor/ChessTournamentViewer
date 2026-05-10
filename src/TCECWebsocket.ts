@@ -103,7 +103,6 @@ export class TCECWebSocket implements TournamentWebSocket {
           )
         ).text();
         this.live = false;
-        console.log(gameNr, "sdfsdf");
         this.openGame(gameNr, pgn);
 
         const game = new Chess960();
@@ -617,7 +616,6 @@ export class TCECWebSocket implements TournamentWebSocket {
         this.callback?.(event);
         this.event = event;
 
-        console.log(gameNr, present, past[0]);
         this.openGame(gameNr ?? (present ?? past[0]).gameNr, livePGN.value);
 
         this.loadKibitzerData(
