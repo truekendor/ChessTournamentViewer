@@ -10,8 +10,6 @@ import type { EngineColor } from "../../LiveInfo";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 import { useInterval } from "../../hooks/useInterval";
-import { IoIosArrowDown } from "react-icons/io";
-import { loadSettings, saveSettings } from "@/LocalStorage";
 
 type EngineCardProps = { color: EngineColor };
 
