@@ -158,17 +158,12 @@ const MoveList = memo(
         getGameAtMoveNumber(startFen, moves, currentMoveNumber).pgn()
       );
     }
-    function openChessDB() {
-      const url =
-        "https://www.chessdb.cn/queryc_en/?" +
+    const chessdbURL = controllers
+      ? "https://www.chessdb.cn/queryc_en/?" +
         getGameAtMoveNumber(startFen, moves, currentMoveNumber)
           .fen()
-          .replaceAll(" ", "_");
-      window.open(url, "_blank");
-    }
-    function downloadLogs() {
-      window.open(downloadURL, "_blank");
-    }
+          .replaceAll(" ", "_")
+      : "";
 
     return (
       <div className="movesWindow">
@@ -277,21 +272,25 @@ const MoveList = memo(
               >
                 <LuClipboardList />
               </button>
-              <button
-                onClick={openChessDB}
+              <a
+                href={chessdbURL}
+                target="_blank"
                 style={{ fontSize: "1rem" }}
+                className="button"
                 title="Analyse on ChessDB"
               >
                 <LuDatabase />
-              </button>
+              </a>
               {downloadURL && (
-                <button
-                  onClick={downloadLogs}
+                <a
+                  href={downloadURL}
+                  target="_blank"
                   style={{ fontSize: "1rem" }}
+                  className="button"
                   title="Download logs"
                 >
                   <LuDownload />
-                </button>
+                </a>
               )}
             </div>
           </div>
