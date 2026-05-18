@@ -72,7 +72,11 @@ export class TCECWebSocket implements TournamentWebSocket {
         const validationFailed = validationResult === null;
 
         if (validationFailed) {
-          // no recovery for now
+          // most common cause of this
+          // is 404 on a (live?) game request, so we just recover with
+          // requesting the whole event with live game
+
+          this.send({ type: "requestEvent" });
           return;
         }
 
@@ -271,10 +275,28 @@ export class TCECWebSocket implements TournamentWebSocket {
       }
     });
 
-    this.socket.on("livechart", (json: any) => {
+    this.socket.on("livechart", (json: unknown) => {
       if (!this.live) return;
 
-      const moveData = json.moves.at(-1);
+      const validation = z.safeParse(kibitzerSchema, json);
+
+      if (!validation.success) {
+        console.log("Error validating livechart data\nIssues:");
+        console.log(validation.error.issues);
+
+        console.log("Errored data: ");
+        console.log(json);
+        return;
+      }
+
+      const result = validation.data;
+
+      const moveData = result.moves.at(-1);
+
+      if (!moveData) {
+        return;
+      }
+
       if (moveData.pv.includes("...")) {
         let score = String(moveData.eval);
         if (score.includes("-")) score = score.replace("-", "+");
@@ -920,12 +942,18 @@ async function handleIfFulfilled(
   promise: PromiseSettledResult<Response>,
   method: "json" | "text"
 ): Promise<unknown | null> {
-  return promise.status === "fulfilled"
-    ? await promise.value[method]().catch((err) => {
-        console.log(err);
-        return null;
-      })
-    : Promise.reject(null);
+  if (promise.status === "fulfilled") {
+    if (!promise.value.ok || promise.value.status > 400) {
+      return Promise.reject(null);
+    }
+
+    return await promise.value[method]().catch((err) => {
+      console.log(err);
+      return null;
+    });
+  } else {
+    return Promise.reject(null);
+  }
 }
 
 function validateKibitzers(
