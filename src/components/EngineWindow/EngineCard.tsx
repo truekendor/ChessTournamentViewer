@@ -10,8 +10,6 @@ import type { EngineColor } from "../../LiveInfo";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 import { useInterval } from "../../hooks/useInterval";
-import { IoIosArrowDown } from "react-icons/io";
-import { loadSettings, saveSettings } from "@/LocalStorage";
 
 type EngineCardProps = { color: EngineColor };
 
@@ -22,7 +20,7 @@ export function formatLargeNumber(value?: string) {
   if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
   if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
   if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
-  return String(x);
+  return x.toFixed(2);
 }
 
 export function formatTime(time: number) {
@@ -110,29 +108,14 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
   const safeFen = fen ?? new Chess().fen();
   const moveNumberOffset = new Chess960(safeFen).moveNumber() - 1;
 
-  const expandedSettingsKey = "expanded-" + color;
-  const [isExpanded, setIsExpanded] = useState(
-    loadSettings()[expandedSettingsKey] === "true"
-  );
-  const expandedClass = isExpanded ? "" : "small";
-
-  useEffect(() => {
-    saveSettings({ [expandedSettingsKey]: String(isExpanded) });
-  }, [isExpanded]);
-
   return (
     <div className={`engineComponent ${loading ? "loading" : ""}`}>
       <EngineMinimal color={color} />
 
       <hr />
 
-      <IoIosArrowDown
-        className={"collapseToggle " + expandedClass}
-        onClick={() => setIsExpanded((expanded) => !expanded)}
-      />
-
       {!isMobile && (
-        <div className={"engineRightSection " + expandedClass}>
+        <div className={"engineRightSection"}>
           {loading && <SkeletonBlock width="100%" />}
 
           {!loading && moves && (
@@ -155,7 +138,7 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
         </div>
       )}
 
-      {!isMobile && !loading && moves && <hr />}
+      {!isMobile && <hr />}
 
       <div className="engineInfoTable">
         {fields.map(([label, value]) => (

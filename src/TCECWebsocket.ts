@@ -214,7 +214,6 @@ export class TCECWebSocket implements TournamentWebSocket {
         ]);
 
         const [lc0, sf] = validateKibitzers(lc0Json, sfJson);
-
         this.loadKibitzerData(lc0, sf);
       } else {
         this.live = true;
@@ -246,6 +245,9 @@ export class TCECWebSocket implements TournamentWebSocket {
     this.socket.on("htmlread", (json: unknown) => {
       if (!this.live) return;
 
+      const opponentName =
+        this.game.getHeaders()[this.game.turn() === "w" ? "Black" : "White"];
+
       const validationResult = z.safeParse(htmlReadSchema, json);
 
       if (!validationResult.success) {
@@ -259,7 +261,9 @@ export class TCECWebSocket implements TournamentWebSocket {
 
       const latestUsefulLine = data
         .split("\n")
-        .filter((line) => !line.includes("currmove"))
+        .filter(
+          (line) => !line.includes("currmove") && !line.includes(opponentName)
+        )
         .at(-1);
 
       if (!latestUsefulLine) {
@@ -394,7 +398,7 @@ export class TCECWebSocket implements TournamentWebSocket {
       const fen = fenParts.slice(0, -2).join(" ") + " " + fenParts.at(-1);
 
       const ignoreIndex = pgnData.Moves.findIndex((moveData) => {
-        const moveFenParts = moveData.fen.split(" ");
+        const moveFenParts = new Chess960(moveData.fen).fen().split(" ");
         const moveFen =
           moveFenParts.slice(0, -2).join(" ") + " " + moveFenParts.at(-1);
         return fen === moveFen;
@@ -558,7 +562,16 @@ export class TCECWebSocket implements TournamentWebSocket {
     lc0: z.infer<typeof kibitzerSchema> | undefined | null,
     sf: z.infer<typeof kibitzerSchema> | undefined | null
   ) {
-    if (lc0 && "desc" in lc0 && lc0.desc) {
+    const lc0Valid =
+      lc0 &&
+      String(lc0.round) === this.game.getHeaders()["Round"] &&
+      "desc" in lc0;
+    const sfValid =
+      sf &&
+      String(sf.round) === this.game.getHeaders()["Round"] &&
+      "desc" in sf;
+
+    if (lc0Valid && lc0.desc) {
       this.callback?.({
         type: "kibitzer",
         color: "blue",
@@ -569,7 +582,7 @@ export class TCECWebSocket implements TournamentWebSocket {
         },
       });
     }
-    if (sf && "desc" in sf && sf.desc) {
+    if (sfValid && sf.desc) {
       this.callback?.({
         type: "kibitzer",
         color: "red",
@@ -755,12 +768,14 @@ export class TCECWebSocket implements TournamentWebSocket {
       })
       .filter((el) => !!el);
 
-    const past = cccGameSchedule.filter((game) => !!game.timeEnd);
-    const present = cccGameSchedule.find(
-      (game) => !!game.timeStart && !game.timeEnd
+    const present =
+      cccGameSchedule.find((game) => !!game.timeStart && !game.timeEnd) ??
+      cccGameSchedule.findLast((game) => !!game.outcome && this.live);
+    const past = cccGameSchedule.filter(
+      (game) => !!game.timeEnd && game !== present
     );
     const future = cccGameSchedule.filter(
-      (game) => !game.outcome && !game.timeStart
+      (game) => !game.outcome && !game.timeStart && game !== present
     );
 
     const allGames = [...past, ...(present ? [present] : []), ...future];
@@ -776,14 +791,11 @@ export class TCECWebSocket implements TournamentWebSocket {
       .map((_, idx) => {
         const pairStart = 2 * Math.floor(idx / 2);
         const first = allGames[pairStart];
-        const second = allGames[pairStart + 1];
-
-        if (!second) {
-          return true;
-        }
+        const second = allGames.at(pairStart + 1);
 
         // Ignore games without valid engines
         if (
+          !second ||
           opponentsPerEngine[first.blackId] === undefined ||
           opponentsPerEngine[first.whiteId] === undefined ||
           opponentsPerEngine[second.blackId] === undefined ||
@@ -826,7 +838,6 @@ export class TCECWebSocket implements TournamentWebSocket {
     this.openGame(gameNr ?? (present ?? past[0]).gameNr, pgn);
 
     const [lc0, sf] = validateKibitzers(lc0Response, sfResponse);
-
     this.loadKibitzerData(lc0, sf);
   }
 
@@ -861,7 +872,7 @@ export class TCECWebSocket implements TournamentWebSocket {
       type: "gameUpdate",
       gameDetails: {
         gameNr: String(current?.gameNr ?? gameList[0]?.gameNr ?? ""),
-        live: true,
+        live: this.live,
         opening: current?.opening ?? "",
         pgn: this.game.pgn(),
       },
