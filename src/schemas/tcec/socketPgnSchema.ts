@@ -17,7 +17,7 @@ const movesEntrySchema = z.object({
     r: z.number(),
   }),
   /**
-   * @todo add description
+   * move time
    */
   mt: z.string(),
   /**
@@ -45,10 +45,8 @@ const movesEntrySchema = z.object({
    */
   d: z.string(),
 
-  // "h" and "tl": further verification needed for the correctness of .optional()
-
   /**
-   * @todo add description
+   * time left
    */
   tl: z.string().optional(),
   /**

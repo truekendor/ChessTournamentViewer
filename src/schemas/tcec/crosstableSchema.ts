@@ -4,7 +4,6 @@ const resultsSchema = z.record(
   z.string(),
   z.object({
     H2h: z.number(),
-    // Text: z.enum(["1", "0", "="]),
     /**
      * string of `0`, `1` and `=`
      *
@@ -56,7 +55,6 @@ const formattingGauntlet = z
 
 export const crosstableSchema = z.object({
   Event: z.string(),
-  // Type: eventType.optional(),
   Type: z.string().optional(),
   Order: z.array(z.string()),
   Table: z.record(z.string(), z.union([formattingH2h, formattingGauntlet])),

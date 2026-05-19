@@ -678,7 +678,19 @@ export class TCECWebSocket implements TournamentWebSocket {
     });
 
     if (result === null) {
-      // TODO retry logic
+      // Retry
+      setTimeout(
+        () =>
+          this.openEvent(
+            scheduleURL,
+            crosstableURL,
+            pgnURL,
+            lc0URL,
+            sfURL,
+            gameNr
+          ),
+        1000
+      );
       return;
     }
 

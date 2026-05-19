@@ -11,7 +11,7 @@ export type SocketMessageFromClient = {
 export type RetryContext = {
   retryCount: number;
   retryIntervalMs: number;
-  //
+
   maxRetryInterval?: number;
   readonly maxRetryCount?: number;
   readonly retryIntervalIncMs?: number;
