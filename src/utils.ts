@@ -10,7 +10,7 @@ export function uciToSan(fen: string, moves: string[]): string[] {
   const result = movesToSan(fen, moves.slice(0, sliceEnd)).moves.map(
     (m) => m.san
   );
-  if (result.length !== (sliceEnd ?? moves.length)) {
+  if (result.length !== (sliceEnd ?? moves.length) && moves.length > 0) {
     console.warn(
       "uciToSan() produced mismatching pv lengths",
       fen,
