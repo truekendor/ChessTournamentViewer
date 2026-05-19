@@ -1,6 +1,5 @@
 import io from "socket.io-client";
 import type {
-  RetryContext,
   SocketMessageFromClient,
   TournamentWebSocket,
 } from "./CCCWebsocket";
@@ -36,7 +35,7 @@ export class TCECWebSocket implements TournamentWebSocket {
   private game: Chess960 = new Chess960();
   private event: CCCEventUpdate | null = null;
 
-  async send(msg: SocketMessageFromClient, retryContext?: RetryContext) {
+  async send(msg: SocketMessageFromClient) {
     if (msg.type === "requestEvent") {
       const gameNr: string | undefined = msg.gameNr;
       let eventNr: string | undefined = msg.eventNr;
@@ -139,44 +138,12 @@ export class TCECWebSocket implements TournamentWebSocket {
           `https://ctv.yoshie2000.de/tcec/archive/json/${safeEventNr}_${gameNr}.pgn`
         ).catch(console.log);
 
-        // easier to inline it for now
-        const retrySend = () => {
-          const _retryContext: RetryContext = retryContext || {
-            retryCount: 0,
-            retryIntervalMs: 2000,
-            maxRetryCount: 10,
-            maxRetryInterval: 10_000,
-            retryIntervalIncMs: 1000,
-          };
-          console.log("retry attempt");
-
-          _retryContext.retryCount += 1;
-
-          const maxRetryAmountExceeded =
-            _retryContext.maxRetryCount &&
-            _retryContext.retryCount >= _retryContext.maxRetryCount;
-
-          if (maxRetryAmountExceeded) {
-            console.log(
-              `Unable to recover after ${_retryContext.retryCount} attempts`
-            );
-          } else {
-            setTimeout(() => {
-              _retryContext.retryIntervalMs +=
-                _retryContext.retryIntervalIncMs ?? 0;
-              this.send(msg, _retryContext);
-            }, _retryContext.retryIntervalMs);
-          }
-        };
-
         if (!response) {
-          retrySend();
           return;
         }
 
         const pgn = await response.text().catch(console.log);
         if (!pgn) {
-          retrySend();
           return;
         }
 
@@ -193,7 +160,6 @@ export class TCECWebSocket implements TournamentWebSocket {
           console.log(err);
           console.log(pgn);
 
-          retrySend();
           return;
         }
 

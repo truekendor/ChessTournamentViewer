@@ -8,15 +8,6 @@ export type SocketMessageFromClient = {
   eventNr?: string;
 };
 
-export type RetryContext = {
-  retryCount: number;
-  retryIntervalMs: number;
-
-  maxRetryInterval?: number;
-  readonly maxRetryCount?: number;
-  readonly retryIntervalIncMs?: number;
-};
-
 export interface TournamentWebSocket {
   connect: (
     onMessage: (message: CCCMessage) => void,
@@ -28,11 +19,8 @@ export interface TournamentWebSocket {
   isConnected: () => boolean;
 
   disconnect: () => void;
-  send: (msg: SocketMessageFromClient, retryContext?: RetryContext) => void;
-  fetchEventList: (
-    onEventList: (msg: CCCEventsListUpdate) => void,
-    retryContext?: RetryContext
-  ) => void;
+  send: (msg: SocketMessageFromClient) => void;
+  fetchEventList: (onEventList: (msg: CCCEventsListUpdate) => void) => void;
 }
 
 const TIMEOUT_RECONNECT_MS = 5000;
@@ -131,10 +119,7 @@ export class CCCWebSocket implements TournamentWebSocket {
     };
   }
 
-  fetchEventList(
-    onEventList: (msg: CCCEventsListUpdate) => void,
-    retryContext?: RetryContext
-  ): void {
+  fetchEventList(onEventList: (msg: CCCEventsListUpdate) => void): void {
     const tempSocket = new WebSocket(this.url);
 
     tempSocket.onopen = () => {
@@ -149,21 +134,6 @@ export class CCCWebSocket implements TournamentWebSocket {
       } catch (err) {
         console.log(err);
         tempSocket.close();
-
-        const _retryContext: RetryContext = retryContext || {
-          retryCount: 0,
-          retryIntervalMs: 2000,
-        };
-
-        _retryContext.retryCount += 1;
-
-        // we can show in the UI retry attempts later
-        setTimeout(() => {
-          console.log(
-            `Fetching event list\nRetry number: ${_retryContext.retryCount}`
-          );
-          this.fetchEventList(onEventList, _retryContext);
-        }, _retryContext.retryIntervalMs);
 
         return;
       }
