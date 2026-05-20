@@ -84,7 +84,7 @@ export class TCECWebSocket implements TournamentWebSocket {
           if (pgnParsed) {
             game.loadPgn(pgn);
           }
-        } catch (err) {
+        } catch {
           // The backend most likely threw a 404, which means this is a live game, not technically an error
           this.send({ type: "requestEvent" });
           return;
