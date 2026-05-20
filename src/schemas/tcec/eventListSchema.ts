@@ -57,7 +57,7 @@ const cupEventsSchema = z
      */
     eventtag: z.string(),
     /**
-     * literally cap number, for `cup_1` is set to  `1`
+     * literally cup number, for `cup_1` is set to  `1`
      */
     cup: z.number(),
     /**
