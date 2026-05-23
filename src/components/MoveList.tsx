@@ -12,6 +12,7 @@ import {
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
+import { getGameAtMoveNumber } from "@/utils";
 
 type MoveListProps = {
   startFen: string;
