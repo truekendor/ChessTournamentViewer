@@ -13,9 +13,8 @@ import { getLiveInfosForMove } from "../LiveInfo";
 import { subscribeWithSelector } from "zustand/middleware";
 import { zustandHmrFix } from "./ZustandHMRFix";
 import { findPvDisagreementPoint } from "../utils";
-import initChess, { WasmChess } from "../../public/pkg/chess_wasm";
-
-await initChess();
+import type { WasmChess } from "../../public/pkg/chess_wasm";
+import { createWasmChess } from "@/createWasmChess";
 
 type LiveInfoData = {
   liveInfos: LiveEngineDataEntry;
@@ -110,7 +109,7 @@ export const useLiveInfo = create<LiveInfoData>()(
 
       currentMoveNumber: -1,
       currentFen: DEFAULT_POSITION,
-      game: new WasmChess(),
+      game: createWasmChess(),
 
       setCurrentFen(fen) {
         set({ currentFen: fen });

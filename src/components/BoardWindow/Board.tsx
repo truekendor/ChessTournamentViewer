@@ -5,12 +5,8 @@ import type { Config } from "@lichess-org/chessground/config";
 import type { DrawShape } from "@lichess-org/chessground/draw";
 import type { LiveEngineDataEntry } from "../../LiveInfo";
 import "./Board.css";
-import initChess, {
-  WasmChess,
-  type SquareStr,
-} from "../../../public/pkg/chess_wasm";
-
-await initChess();
+import type { WasmChess, SquareStr } from "../../../public/pkg/chess_wasm";
+import { createWasmChess } from "@/createWasmChess";
 
 const BOARD_THROTTLE_MS = 50;
 
@@ -30,7 +26,7 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
   const boardRef = useRef<Api>(null);
   const lastBoardUpdateRef = useRef(new Date().getTime());
 
-  const CHESS_REF = useRef<WasmChess>(new WasmChess());
+  const CHESS_REF = useRef<WasmChess>(createWasmChess());
 
   useEffect(() => {
     if (boardRef.current || !boardElementRef.current) return;

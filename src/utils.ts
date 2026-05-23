@@ -1,6 +1,7 @@
 import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
-import { WasmChess } from "../public/pkg/chess_wasm";
+import type { WasmChess } from "../public/pkg/chess_wasm";
+import { createWasmChess } from "./createWasmChess";
 
 export function uciToSan(fen: string, moves: string[]): string[] {
   // some engines report stuff after the pv, starting with "string"
@@ -41,8 +42,6 @@ export function buildPvGame(
   pvMoveNumber: number
 ) {
   game.load(fen);
-  // const game = new WasmChess(fen);
-
   for (let i = 0; i < moves.length; i++) {
     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
       break;
@@ -57,33 +56,7 @@ export function buildPvGame(
       break;
     }
   }
-
-  // return game;
 }
-// export function buildPvGame(
-//   fen: string,
-//   moves: string[],
-//   pvMoveNumber: number
-// ) {
-//   const game = new WasmChess(fen);
-
-//   for (let i = 0; i < moves.length; i++) {
-//     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
-//       break;
-//     }
-
-//     const san = moves[i];
-//     if (!san) break;
-
-//     try {
-//       game.move(san);
-//     } catch {
-//       break;
-//     }
-//   }
-
-//   return game;
-// }
 
 // Normalize a PV so it always starts from the current position (fen's turn).
 // If it's not this engine's turn, its PV starts with its own last move,
@@ -155,4 +128,22 @@ export function formatTime(time: number) {
   const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
   const minutes = String(Math.floor(time / (1000 * 60))).padStart(2, "0");
   return `${minutes}:${seconds}.${hundreds}`;
+}
+
+export function getGameAtMoveNumber(
+  fen: string,
+  moves: string[],
+  moveNumber: number
+) {
+  const game = createWasmChess(fen);
+
+  for (
+    let i = 0;
+    (i < moveNumber || moveNumber === -1) && i < moves.length;
+    i++
+  ) {
+    if (!game.legalMovesSan().includes(moves[i])) break;
+    game.move(moves[i]);
+  }
+  return game;
 }

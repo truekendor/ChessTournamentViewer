@@ -6,7 +6,7 @@ import {
 } from "../components/BoardWindow/Board";
 import { useLiveInfo } from "../context/LiveInfoContext";
 import { getLiveInfosForMove } from "../LiveInfo";
-import { WasmChess } from "../../public/pkg/chess_wasm";
+import { createWasmChess } from "@/createWasmChess";
 
 export function useLiveBoard({ animated, id }: BoardProps) {
   const boardHandle = useRef<BoardHandle>(null);
@@ -34,7 +34,7 @@ export function useLiveBoard({ animated, id }: BoardProps) {
 
 export function useKibitzerBoard({ animated, id }: BoardProps) {
   const [boardHandle, setBoardHandle] = useState<BoardHandle | null>(null);
-  const game = useRef(new WasmChess());
+  const game = useRef(createWasmChess());
 
   const [currentMoveNumber, setCurrentMoveNumber] = useState(-1);
   const [currentFen, setCurrentFen] = useState(game.current.fen());

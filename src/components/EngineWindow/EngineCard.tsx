@@ -10,11 +10,11 @@ import { useLiveInfo } from "../../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 import { useInterval } from "../../hooks/useInterval";
 import { DEFAULT_POSITION } from "@/chess.js/chess";
-import { WasmChess } from "../../../public/pkg/chess_wasm";
+import { createWasmChess } from "@/createWasmChess";
 
 type EngineCardProps = { color: EngineColor };
 
-const _CHESS = new WasmChess();
+const _CHESS = createWasmChess();
 
 const EngineCard = memo(({ color }: EngineCardProps) => {
   const state = useLiveInfo.getState();
@@ -72,7 +72,6 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
     if (!fen || !moves) return;
 
     buildPvGame(game.current, fen, moves, -1);
-    // game.current = buildPvGame(fen, moves, -1);
     setCurrentFen(game.current.fen());
     setCurrentMoveNumber(-1);
   }, [moves]);

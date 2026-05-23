@@ -25,10 +25,10 @@ import { kibitzerSchema } from "./schemas/tcec/kibitzerSchema";
 import { socketPgnSchema } from "./schemas/tcec/socketPgnSchema";
 import { eventListSchema } from "./schemas/tcec/eventListSchema";
 import { livePGNSchema } from "./schemas/tcec/pgnSchema";
-import initChess, { WasmChess } from "../public/pkg/chess_wasm";
+import type { WasmChess } from "../public/pkg/chess_wasm";
+import { createWasmChess } from "./createWasmChess";
 
-const disposableChess = new WasmChess();
-await initChess();
+const disposableChess = createWasmChess();
 
 export class TCECWebSocket implements TournamentWebSocket {
   private socket: SocketIOClient.Socket | null = null;
@@ -36,7 +36,7 @@ export class TCECWebSocket implements TournamentWebSocket {
   private connected: boolean = false;
 
   private live: boolean = true;
-  private game: WasmChess = new WasmChess();
+  private game: WasmChess = createWasmChess();
   private event: CCCEventUpdate | null = null;
 
   async send(msg: SocketMessageFromClient) {

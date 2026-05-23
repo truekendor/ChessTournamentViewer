@@ -12,7 +12,6 @@ import {
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
-import { WasmChess } from "../../public/pkg/chess_wasm";
 
 type MoveListProps = {
   startFen: string;
@@ -25,24 +24,6 @@ type MoveListProps = {
   controllers: boolean;
   disagreementMoveIndex?: number;
 };
-
-export function getGameAtMoveNumber(
-  fen: string,
-  moves: string[],
-  moveNumber: number
-) {
-  const game = new WasmChess(fen);
-
-  for (
-    let i = 0;
-    (i < moveNumber || moveNumber === -1) && i < moves.length;
-    i++
-  ) {
-    if (!game.legalMovesSan().includes(moves[i])) break;
-    game.move(moves[i]);
-  }
-  return game;
-}
 
 function moveClass(active: boolean, disagreement: boolean, bookMove: boolean) {
   return (
