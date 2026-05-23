@@ -1,6 +1,6 @@
-import { Chess960 } from "./chess.js/chess";
 import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
+import { WasmChess } from "../public/pkg/chess_wasm";
 
 export function uciToSan(fen: string, moves: string[]): string[] {
   // some engines report stuff after the pv, starting with "string"
@@ -35,11 +35,13 @@ export function sanToUci(fen: string, moves: string[]): string[] {
 }
 
 export function buildPvGame(
+  game: WasmChess,
   fen: string,
   moves: string[],
   pvMoveNumber: number
 ) {
-  const game = new Chess960(fen);
+  game.load(fen);
+  // const game = new WasmChess(fen);
 
   for (let i = 0; i < moves.length; i++) {
     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
@@ -50,18 +52,38 @@ export function buildPvGame(
     if (!san) break;
 
     try {
-      const result = game.move(san, { strict: false });
-
-      if (!result) {
-        break;
-      }
+      game.move(san);
     } catch {
       break;
     }
   }
 
-  return game;
+  // return game;
 }
+// export function buildPvGame(
+//   fen: string,
+//   moves: string[],
+//   pvMoveNumber: number
+// ) {
+//   const game = new WasmChess(fen);
+
+//   for (let i = 0; i < moves.length; i++) {
+//     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
+//       break;
+//     }
+
+//     const san = moves[i];
+//     if (!san) break;
+
+//     try {
+//       game.move(san);
+//     } catch {
+//       break;
+//     }
+//   }
+
+//   return game;
+// }
 
 // Normalize a PV so it always starts from the current position (fen's turn).
 // If it's not this engine's turn, its PV starts with its own last move,
@@ -115,4 +137,22 @@ export function findPvDisagreementPoint(
   }
 
   return minLength;
+}
+
+export function formatLargeNumber(value?: string) {
+  if (!value) return "-";
+  const x = Number(value);
+  if (isNaN(x)) return "-";
+  if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
+  if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
+  if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
+  return x.toFixed(2);
+}
+
+export function formatTime(time: number) {
+  if (time < 0) time = 0;
+  const hundreds = String(Math.floor(time / 100) % 10).padEnd(2, "0");
+  const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
+  const minutes = String(Math.floor(time / (1000 * 60))).padStart(2, "0");
+  return `${minutes}:${seconds}.${hundreds}`;
 }

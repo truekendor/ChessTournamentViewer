@@ -13,12 +13,12 @@ import {
 } from "../../LiveInfo";
 import { loadLiveInfos } from "../../LocalStorage";
 import { type Square } from "../../chess.js/chess";
-import { uciToSan } from "../../utils";
 import { EngineMinimal } from "../EngineWindow/EngineMinimal";
 import { GameResultOverlay } from "./GameResultOverlay";
 import { useKibitzer } from "../../hooks/useKibitzer";
 import { LiveMoveList } from "./LiveMoveList";
 import { useMediaQuery } from "react-responsive";
+import { movesToSan, type PieceSymbol } from "../../../public/pkg/chess_wasm";
 
 const wsByProvider = {
   ccc: new CCCWebSocket(),
@@ -52,10 +52,10 @@ export const BoardWindow = memo(() => {
   const handleLiveInfo = useCallback(
     (msg: CCCLiveInfo) => {
       if (activeWSRef.current instanceof CCCWebSocket) {
-        msg.info.pvSan = uciToSan(
-          game.fen(),
-          msg.info.pv.trim().split(" ")
-        ).join(" ");
+        msg.info.pvSan = movesToSan(
+          msg.info.pv.trim().split(" "),
+          game.fen()
+        ).moves.join(" ");
       }
 
       const color = msg.info.color as EngineColor;
@@ -102,6 +102,7 @@ export const BoardWindow = memo(() => {
             engineInfo: EmptyEngineDefinition,
             liveInfo: [],
           });
+          const headersData = game.getHeaders();
 
           // Load white + black engine live info
           const { liveInfosBlack, liveInfosWhite } =
@@ -110,12 +111,12 @@ export const BoardWindow = memo(() => {
             eventState.activeEvent?.tournamentDetails.engines ?? [];
           const wEngine =
             engines.find(
-              (engine) => engine.name === game.getHeaders()["White"]
+              (engine) => engine.name === headersData.get("White")
             ) || EmptyEngineDefinition;
 
           const bEngine =
             engines.find(
-              (engine) => engine.name === game.getHeaders()["Black"]
+              (engine) => engine.name === headersData.get("Black")
             ) || EmptyEngineDefinition;
 
           liveInfoState.setLiveEngineData("white", {
@@ -131,13 +132,13 @@ export const BoardWindow = memo(() => {
           updateBoard();
 
           const isChess960 = ["chess960", "fischerandom"].includes(
-            game.getHeaders()["Variant"]?.toLowerCase()
+            headersData.get("Variant")?.toLowerCase() ?? ""
           );
           eventState.setGame(msg);
           eventState.setChess960(isChess960);
 
           liveInfoState.setCurrentFen(game.fen());
-          liveInfoState.setMoves(game.history());
+          liveInfoState.setMoves(game.historySan());
 
           break;
         }
@@ -161,11 +162,11 @@ export const BoardWindow = memo(() => {
         case "newMove": {
           const from = msg.move.slice(0, 2) as Square;
           const to = msg.move.slice(2, 4) as Square;
-          const promo = msg.move?.[4];
+          const promo = msg.move?.[4] as PieceSymbol;
 
-          game.move({ from, to, promotion: promo });
+          game.moveFromObj({ from, to, promotion: promo });
           liveInfoState.setCurrentFen(game.fen());
-          liveInfoState.setMoves(game.history());
+          liveInfoState.setMoves(game.historySan());
           updateBoard(true);
 
           break;

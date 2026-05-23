@@ -4,14 +4,19 @@ import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
 import type { DrawShape } from "@lichess-org/chessground/draw";
 import type { LiveEngineDataEntry } from "../../LiveInfo";
-import { Chess960, type Square } from "../../chess.js/chess";
 import "./Board.css";
+import initChess, {
+  WasmChess,
+  type SquareStr,
+} from "../../../public/pkg/chess_wasm";
+
+await initChess();
 
 const BOARD_THROTTLE_MS = 50;
 
 export type BoardHandle = {
   updateBoard: (
-    game: Chess960,
+    game: WasmChess,
     currentMoveNumber: number,
     liveInfos?: LiveEngineDataEntry,
     bypassRateLimit?: boolean
@@ -24,6 +29,8 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
   const boardElementRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Api>(null);
   const lastBoardUpdateRef = useRef(new Date().getTime());
+
+  const CHESS_REF = useRef<WasmChess>(new WasmChess());
 
   useEffect(() => {
     if (boardRef.current || !boardElementRef.current) return;
@@ -49,7 +56,7 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
           return;
 
         const fen = game.fenAt(currentMoveNumber);
-        const turn = game.turnAt(currentMoveNumber);
+        const turn = game.sideToMoveAt(currentMoveNumber);
         const lastMove = game.moveAt(currentMoveNumber);
 
         const arrows: DrawShape[] = [];
@@ -61,8 +68,8 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
           if (nextMove && nextMove.length >= 4) {
             moveWhite = nextMove;
             arrows.push({
-              orig: (nextMove.slice(0, 2) as Square) || "a1",
-              dest: (nextMove.slice(2, 4) as Square) || "a1",
+              orig: (nextMove.slice(0, 2) as SquareStr) || "a1",
+              dest: (nextMove.slice(2, 4) as SquareStr) || "a1",
               brush: liveInfos.white.liveInfo.info.color,
             });
           }
@@ -75,14 +82,15 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
             arrows[0].brush = "agree";
           } else if (nextMove && nextMove.length >= 4) {
             arrows.push({
-              orig: (nextMove.slice(0, 2) as Square) || "a1",
-              dest: (nextMove.slice(2, 4) as Square) || "a1",
+              orig: (nextMove.slice(0, 2) as SquareStr) || "a1",
+              dest: (nextMove.slice(2, 4) as SquareStr) || "a1",
               brush: liveInfos.black.liveInfo.info.color,
             });
           }
         }
 
-        const legalMoves = new Chess960(fen).moves();
+        CHESS_REF.current.load(fen);
+        const legalMoves = CHESS_REF.current.legalMovesSan();
         for (const color of ["green", "red", "blue"] as const) {
           if (liveInfos?.[color].liveInfo) {
             const liveInfo = liveInfos[color].liveInfo.info;
@@ -91,8 +99,8 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
             const nextMove = legalMoves.includes(pvSan[0]) ? pv[0] : pv[1];
             if (nextMove && nextMove.length >= 4) {
               arrows.push({
-                orig: (nextMove.slice(0, 2) as Square) || "a1",
-                dest: (nextMove.slice(2, 4) as Square) || "a1",
+                orig: (nextMove.slice(0, 2) as SquareStr) || "a1",
+                dest: (nextMove.slice(2, 4) as SquareStr) || "a1",
                 brush: color,
               });
             }
@@ -101,7 +109,7 @@ export const Board = forwardRef<BoardHandle, BoardProps>((props, ref) => {
 
         const config: Config = {
           drawable: {
-            // @ts-ignore
+            // @ts-expect-error todo remove later
             brushes: {
               white: { key: "white", color: "#fff", opacity: 1, lineWidth: 10 },
               black: { key: "black", color: "#000", opacity: 1, lineWidth: 10 },

@@ -7,12 +7,15 @@ import {
   type LiveEngineDataEntry,
   type LiveEngineDataObject,
 } from "../LiveInfo";
-import { Chess, Chess960 } from "../chess.js/chess";
+import { DEFAULT_POSITION } from "../chess.js/chess";
 import type { CCCLiveInfo } from "../types";
 import { getLiveInfosForMove } from "../LiveInfo";
 import { subscribeWithSelector } from "zustand/middleware";
 import { zustandHmrFix } from "./ZustandHMRFix";
 import { findPvDisagreementPoint } from "../utils";
+import initChess, { WasmChess } from "../../public/pkg/chess_wasm";
+
+await initChess();
 
 type LiveInfoData = {
   liveInfos: LiveEngineDataEntry;
@@ -43,7 +46,7 @@ type LiveInfoData = {
   currentFen: string;
   setCurrentFen: (fen: string) => void;
 
-  game: Chess960;
+  game: WasmChess;
 };
 
 export const useLiveInfo = create<LiveInfoData>()(
@@ -100,14 +103,14 @@ export const useLiveInfo = create<LiveInfoData>()(
           state.liveInfos = getLiveInfosForMove(
             state.liveEngineData,
             state.currentMoveNumber,
-            state.game.turnAt(state.currentMoveNumber)
+            state.game.sideToMoveAt(state.currentMoveNumber)
           );
         });
       },
 
       currentMoveNumber: -1,
-      currentFen: new Chess().fen(),
-      game: new Chess960(),
+      currentFen: DEFAULT_POSITION,
+      game: new WasmChess(),
 
       setCurrentFen(fen) {
         set({ currentFen: fen });
@@ -122,7 +125,7 @@ export const useLiveInfo = create<LiveInfoData>()(
           state.liveInfos = getLiveInfosForMove(
             state.liveEngineData,
             state.currentMoveNumber,
-            state.game.turnAt(state.currentMoveNumber)
+            state.game.sideToMoveAt(state.currentMoveNumber)
           );
         });
       },
@@ -144,7 +147,7 @@ export const useLiveInfo = create<LiveInfoData>()(
           state.liveInfos = getLiveInfosForMove(
             state.liveEngineData,
             state.currentMoveNumber,
-            state.game.turnAt(state.currentMoveNumber)
+            state.game.sideToMoveAt(state.currentMoveNumber)
           );
 
           if (data.liveInfo) {
@@ -178,7 +181,7 @@ export const useLiveInfo = create<LiveInfoData>()(
           state.liveInfos = getLiveInfosForMove(
             state.liveEngineData,
             state.currentMoveNumber,
-            state.game.turnAt(state.currentMoveNumber)
+            state.game.sideToMoveAt(state.currentMoveNumber)
           );
 
           state.engineAgreePly[data.info.ply] = findPvDisagreementPoint(

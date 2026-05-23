@@ -69,7 +69,7 @@ export const useKibitzer = ({
     Promise.all(kibitzer.current.map((kibitzer) => kibitzer.stop())).then(
       () => {
         activeKibitzer.onMessage = (result) => {
-          if (game.getHeaders()["Event"] === "?") return;
+          if (game.getHeaders().get("Event") === "?") return;
           if (game.fen() != result.fen) return;
 
           result.liveInfo.info.ply = result.gameIndex;

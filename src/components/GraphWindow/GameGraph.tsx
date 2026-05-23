@@ -2,11 +2,11 @@ import { Line } from "react-chartjs-2";
 import type { CCCLiveInfo } from "../../types";
 import { memo, useState } from "react";
 import "./GameGraph.css";
-import { formatLargeNumber, formatTime } from "../EngineWindow/EngineCard";
 import type { PointElement } from "chart.js";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import type { LiveEngineData } from "../../LiveInfo";
 import { useInterval } from "../../hooks/useInterval";
+import { formatLargeNumber, formatTime } from "@/utils";
 
 const COLORS = {
   white: "rgba(255, 255, 255, 0.7)",

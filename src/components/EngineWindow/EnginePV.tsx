@@ -50,7 +50,8 @@ export function EnginePV({ color }: EnginePVProps) {
       if (shallow(moves, previous)) return previous;
 
       setCurrentMoveNumber(-1);
-      game.current = buildPvGame(state.currentFen, moves, -1);
+      buildPvGame(game.current, state.currentFen, moves, -1);
+      // game.current = buildPvGame(state.currentFen, moves, -1);
       setCurrentFen(game.current.fen());
       return moves;
     });

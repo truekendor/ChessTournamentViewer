@@ -6,13 +6,13 @@ import {
   MdKeyboardDoubleArrowRight,
 } from "react-icons/md";
 import "./MoveList.css";
-import { Chess960 } from "../chess.js/chess";
 import {
   LuClipboard,
   LuClipboardList,
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
+import { WasmChess } from "../../public/pkg/chess_wasm";
 
 type MoveListProps = {
   startFen: string;
@@ -31,15 +31,15 @@ export function getGameAtMoveNumber(
   moves: string[],
   moveNumber: number
 ) {
-  const game = new Chess960(fen);
+  const game = new WasmChess(fen);
 
   for (
     let i = 0;
     (i < moveNumber || moveNumber === -1) && i < moves.length;
     i++
   ) {
-    if (!game.moves().includes(moves[i])) break;
-    game.move(moves[i], { strict: false });
+    if (!game.legalMovesSan().includes(moves[i])) break;
+    game.move(moves[i]);
   }
   return game;
 }

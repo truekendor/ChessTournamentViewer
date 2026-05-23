@@ -18,6 +18,8 @@ import { BoardWindow } from "./components/BoardWindow/BoardWindow";
 import { ScheduleWindow } from "./components/ScheduleWindow/ScheduleWindow";
 import { Popup } from "./components/Popup/Popup";
 
+import initChess from "./../public/pkg";
+
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -27,6 +29,8 @@ Chart.register(
   Tooltip,
   Legend
 );
+
+await initChess();
 
 function App() {
   return (
