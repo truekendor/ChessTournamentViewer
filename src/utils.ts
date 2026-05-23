@@ -1,6 +1,9 @@
-import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
-import type { WasmChess } from "../public/pkg/chess_wasm";
+import {
+  movesToUci,
+  movesToSan,
+  type WasmChess,
+} from "../public/pkg/chess_wasm";
 import { createWasmChess } from "./createWasmChess";
 
 export function uciToSan(fen: string, moves: string[]): string[] {
@@ -8,9 +11,9 @@ export function uciToSan(fen: string, moves: string[]): string[] {
   const sliceEnd = moves.includes("string")
     ? moves.indexOf("string")
     : undefined;
-  const result = movesToSan(fen, moves.slice(0, sliceEnd)).moves.map(
-    (m) => m.san
-  );
+
+  const result = movesToSan(moves.slice(0, sliceEnd), fen).moves;
+
   if (result.length !== (sliceEnd ?? moves.length) && moves.length > 0) {
     console.warn(
       "uciToSan() produced mismatching pv lengths",
@@ -23,7 +26,7 @@ export function uciToSan(fen: string, moves: string[]): string[] {
 }
 
 export function sanToUci(fen: string, moves: string[]): string[] {
-  const result = movesToLan(fen, moves).moves.map((m) => m.lan);
+  const result = movesToUci(moves, fen).moves;
   if (result.length !== moves.length) {
     console.warn(
       "sanToUci() produced mismatching pv lengths",
