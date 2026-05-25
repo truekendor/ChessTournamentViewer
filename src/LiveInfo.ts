@@ -182,7 +182,7 @@ export function extractLiveInfoFromTCECComment(
 
   if (data[0] === "book") return;
 
-  let score = data[data.findIndex((s) => s.includes("wv="))].split("=")[1];
+  let score = data[data.findIndex((s) => s.startsWith("wv="))].split("=")[1];
   if (
     score.startsWith("M") ||
     (!score.startsWith("+") && !score.startsWith("-"))
@@ -192,12 +192,12 @@ export function extractLiveInfoFromTCECComment(
 
   const tmpGame = new Chess960(fenBeforeMove);
   const isWhite = tmpGame.turn() === "w";
-  const sanMoves = data[data.findIndex((s) => s.includes("pv="))]
+  const sanMoves = data[data.findIndex((s) => s.startsWith("pv="))]
     .replace("pv=", "")
     .replaceAll('"', "");
   const uciMoves = sanToUci(fenBeforeMove, sanMoves.split(" "));
 
-  const time = data[data.findIndex((s) => s.includes("mt="))].split("=")[1];
+  const time = data[data.findIndex((s) => s.startsWith("mt="))].split("=")[1];
   let timeLeft: number = 0;
   if (array && tcBase && tcIncrement) {
     const previousTimeLeft = array.at(-1)?.info.timeLeft ?? tcBase;
@@ -208,20 +208,21 @@ export function extractLiveInfoFromTCECComment(
     type: "liveInfo",
     info: {
       color: isWhite ? "white" : "black",
-      depth: data[data.findIndex((s) => s.includes("d="))].split("=")[1],
+      depth: data[data.findIndex((s) => s.startsWith("d="))].split("=")[1],
       multipv: "1",
       hashfull: String(
-        Number(data[data.findIndex((s) => s.includes("h="))].split("=")[1]) * 10
+        Number(data[data.findIndex((s) => s.startsWith("h="))].split("=")[1]) *
+          10
       ),
       name: "",
-      nodes: data[data.findIndex((s) => s.includes("n="))].split("=")[1],
+      nodes: data[data.findIndex((s) => s.startsWith("n="))].split("=")[1],
       ply: ply,
       pv: uciMoves.join(" "),
       pvSan: sanMoves,
       score,
-      seldepth: data[data.findIndex((s) => s.includes("sd="))].split("=")[1],
-      speed: data[data.findIndex((s) => s.includes("s="))].split("=")[1],
-      tbhits: data[data.findIndex((s) => s.includes("tb="))]
+      seldepth: data[data.findIndex((s) => s.startsWith("sd="))].split("=")[1],
+      speed: data[data.findIndex((s) => s.startsWith("s="))].split("=")[1],
+      tbhits: data[data.findIndex((s) => s.startsWith("tb="))]
         .split("=")[1]
         .replace("null", "-"),
       time,
