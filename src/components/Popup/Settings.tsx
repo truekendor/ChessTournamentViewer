@@ -93,6 +93,24 @@ export const Settings = memo(() => {
       </div>
 
       <div className="settingsHeader">
+        <h4>Native Kibitzers</h4>
+      </div>
+
+      <div className="engineSettings">
+        <small>
+          In order to use local UCI engines as kibitzers, download{" "}
+          <a
+            href="https://github.com/Yoshie2000/ChessTournamentViewer/blob/main/native_kibitzer.py"
+            target="_blank"
+          >
+            native_kibitzer.py
+          </a>{" "}
+          and run it using{" "}
+          <pre>python native_kibitzer.py /path/to/uci/engine</pre>
+        </small>
+      </div>
+
+      <div className="settingsHeader">
         <h4>UI Settings</h4>
       </div>
 
