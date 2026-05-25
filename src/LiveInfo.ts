@@ -4,6 +4,7 @@ import type { CCCEngine, CCCLiveInfo } from "./types";
 import { sanToUci, uciToSan } from "./utils";
 import z from "zod";
 import { liveInfoSchema } from "./schemas/tcec/liveInfoSchema";
+import type { WasmChess } from "../public/pkg/chess_wasm";
 
 export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
@@ -232,7 +233,7 @@ export function extractLiveInfoFromTCECComment(
   return liveInfo;
 }
 
-function extractLiveInfoFromTCECGame(game: Chess960) {
+function extractLiveInfoFromTCECGame(game: WasmChess) {
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];
 
@@ -262,21 +263,23 @@ function extractLiveInfoFromTCECGame(game: Chess960) {
   return { liveInfosWhite, liveInfosBlack };
 }
 
-export function getTimeControl(game: Chess960) {
-  const timeControl = game.getHeaders()["TimeControl"];
+export function getTimeControl(game: WasmChess) {
+  const timeControl = game.getHeaders().get("TimeControl");
   if (!timeControl) return { tcBase: 0, tcIncrement: 0 };
   const tcBase = 1000 * Number(timeControl.split("+")[0]);
   const tcIncrement = 1000 * Number(timeControl.split("+")[1]);
   return { tcBase, tcIncrement };
 }
 
-export function extractLiveInfoFromGame(game: Chess960) {
-  if (game.getHeaders()["Site"]?.includes("tcec"))
+export function extractLiveInfoFromGame(game: WasmChess) {
+  const headersData = game.getHeaders();
+  if (headersData.get("Site")?.includes("tcec")) {
     return extractLiveInfoFromTCECGame(game);
+  }
 
   const { tcBase, tcIncrement } = getTimeControl(game);
 
-  const startingFen = game.getHeaders()["FEN"] ?? "";
+  const startingFen = headersData.get("FEN") ?? "";
 
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];

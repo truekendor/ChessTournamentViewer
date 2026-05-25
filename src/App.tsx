@@ -19,6 +19,8 @@ import { ScheduleWindow } from "./components/ScheduleWindow/ScheduleWindow";
 import { Popup } from "./components/Popup/Popup";
 import { ConfigProvider, theme } from "antd";
 
+import initChess from "./../public/pkg";
+
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -28,6 +30,8 @@ Chart.register(
   Tooltip,
   Legend
 );
+
+await initChess();
 
 function App() {
   return (

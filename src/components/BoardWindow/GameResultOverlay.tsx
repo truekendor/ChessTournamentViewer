@@ -6,6 +6,7 @@ import { useInterval } from "../../hooks/useInterval";
 import { useShallow } from "zustand/shallow";
 
 export function GameResultOverlay() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setCurrentFen] = useState<string>();
   const [currentMoveNumber, setCurrentMoveNumber] = useState(-1);
 
@@ -22,10 +23,10 @@ export function GameResultOverlay() {
       const pgnHeaders = state.game.getHeaders();
       const termination =
         activeGame?.gameDetails?.termination ??
-        pgnHeaders["Termination"] ??
-        pgnHeaders["TerminationDetails"] ??
+        pgnHeaders.get("Termination") ??
+        pgnHeaders.get("TerminationDetails") ??
         "";
-      const result = pgnHeaders["Result"];
+      const result = pgnHeaders.get("Result");
 
       return { termination, result };
     })

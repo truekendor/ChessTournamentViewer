@@ -42,8 +42,20 @@ export const useKibitzer = ({
   useEffect(() => {
     if (enableKibitzer) {
       kibitzer.current = [
-        new EngineWorker(new NativeWorker(hash, threads, chess960)),
-        new EngineWorker(new StockfishWorker(hash, threads, chess960)),
+        new EngineWorker(
+          new NativeWorker(
+            kibitzerSettings.hash,
+            kibitzerSettings.threads,
+            chess960
+          )
+        ),
+        new EngineWorker(
+          new StockfishWorker(
+            kibitzerSettings.hash,
+            kibitzerSettings.threads,
+            chess960
+          )
+        ),
       ];
     } else {
       kibitzer.current = [];
@@ -57,7 +69,7 @@ export const useKibitzer = ({
     Promise.all(kibitzer.current.map((kibitzer) => kibitzer.stop())).then(
       () => {
         activeKibitzer.onMessage = (result) => {
-          if (game.getHeaders()["Event"] === "?") return;
+          if (game.getHeaders().get("Event") === "?") return;
           if (game.fen() != result.fen) return;
 
           result.liveInfo.info.ply = result.gameIndex;

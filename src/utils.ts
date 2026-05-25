@@ -1,15 +1,19 @@
-import { Chess960 } from "./chess.js/chess";
-import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
+import {
+  movesToUci,
+  movesToSan,
+  type WasmChess,
+} from "../public/pkg/chess_wasm";
+import { createWasmChess } from "./createWasmChess";
 
 export function uciToSan(fen: string, moves: string[]): string[] {
   // some engines report stuff after the pv, starting with "string"
   const sliceEnd = moves.includes("string")
     ? moves.indexOf("string")
     : undefined;
-  const result = movesToSan(fen, moves.slice(0, sliceEnd)).moves.map(
-    (m) => m.san
-  );
+
+  const result = movesToSan(moves.slice(0, sliceEnd), fen).moves;
+
   if (result.length !== (sliceEnd ?? moves.length) && moves.length > 0) {
     console.warn(
       "uciToSan() produced mismatching pv lengths",
@@ -22,7 +26,7 @@ export function uciToSan(fen: string, moves: string[]): string[] {
 }
 
 export function sanToUci(fen: string, moves: string[]): string[] {
-  const result = movesToLan(fen, moves).moves.map((m) => m.lan);
+  const result = movesToUci(moves, fen).moves;
   if (result.length !== moves.length) {
     console.warn(
       "sanToUci() produced mismatching pv lengths",
@@ -35,12 +39,12 @@ export function sanToUci(fen: string, moves: string[]): string[] {
 }
 
 export function buildPvGame(
+  game: WasmChess,
   fen: string,
   moves: string[],
   pvMoveNumber: number
 ) {
-  const game = new Chess960(fen);
-
+  game.load(fen);
   for (let i = 0; i < moves.length; i++) {
     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
       break;
@@ -50,17 +54,11 @@ export function buildPvGame(
     if (!san) break;
 
     try {
-      const result = game.move(san, { strict: false });
-
-      if (!result) {
-        break;
-      }
+      game.move(san);
     } catch {
       break;
     }
   }
-
-  return game;
 }
 
 // Normalize a PV so it always starts from the current position (fen's turn).
@@ -115,4 +113,40 @@ export function findPvDisagreementPoint(
   }
 
   return minLength;
+}
+
+export function formatLargeNumber(value?: string) {
+  if (!value) return "-";
+  const x = Number(value);
+  if (isNaN(x)) return "-";
+  if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
+  if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
+  if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
+  return x.toFixed(2);
+}
+
+export function formatTime(time: number) {
+  if (time < 0) time = 0;
+  const hundreds = String(Math.floor(time / 100) % 10).padEnd(2, "0");
+  const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
+  const minutes = String(Math.floor(time / (1000 * 60))).padStart(2, "0");
+  return `${minutes}:${seconds}.${hundreds}`;
+}
+
+export function getGameAtMoveNumber(
+  fen: string,
+  moves: string[],
+  moveNumber: number
+) {
+  const game = createWasmChess(fen);
+
+  for (
+    let i = 0;
+    (i < moveNumber || moveNumber === -1) && i < moves.length;
+    i++
+  ) {
+    if (!game.legalMovesSan().includes(moves[i])) break;
+    game.move(moves[i]);
+  }
+  return game;
 }
