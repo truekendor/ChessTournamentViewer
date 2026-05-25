@@ -2,6 +2,14 @@ import { Chess960 } from "./chess.js/chess";
 import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
 
+import initChess, { WasmChess } from "./chess.wasm/chess_wasm";
+
+await initChess();
+
+export function createChessWasm(fen?: string): WasmChess {
+  return new WasmChess(fen);
+}
+
 export function uciToSan(fen: string, moves: string[]): string[] {
   // some engines report stuff after the pv, starting with "string"
   const sliceEnd = moves.includes("string")
