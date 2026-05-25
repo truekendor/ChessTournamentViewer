@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Schedule } from "./Schedule";
 import { TwitchChat } from "./TwitchChat";
+import { useEventStore } from "@/context/EventContext";
+import { Select } from "antd";
 
 const TABS = ["Schedule", "Chat"] as const;
 type Tab = (typeof TABS)[number];
 
 export const ScheduleWindow = () => {
   const [activeTab, setActiveTab] = useState<Tab>("Schedule");
+
+  const engines = useEventStore((state) => state.engines);
+  const [selectedEngineId, setSelectedEngineId] = useState<string>("");
+
+  const activeEvent = useEventStore((state) => state.activeEvent);
+  useEffect(() => {
+    setSelectedEngineId("");
+  }, [activeEvent]);
 
   return (
     <div className="scheduleWindow">
@@ -20,6 +30,19 @@ export const ScheduleWindow = () => {
             {tab}
           </button>
         ))}
+
+        <Select
+          onChange={setSelectedEngineId}
+          style={{ width: 140 }}
+          value={selectedEngineId}
+          options={[
+            { value: "", label: "All Engines" },
+            ...engines.map((engine) => ({
+              value: engine.id,
+              label: engine.name,
+            })),
+          ]}
+        />
       </div>
 
       <div
@@ -33,7 +56,7 @@ export const ScheduleWindow = () => {
         className="tab"
         style={activeTab === "Chat" ? { display: "none" } : undefined}
       >
-        <Schedule />
+        <Schedule selectedEngineId={selectedEngineId} />
       </div>
     </div>
   );

@@ -18,7 +18,9 @@ function formatOutcome(outcome: string) {
   return outcome.replace(/-/, "\u2013"); // en dash
 }
 
-const Schedule = memo(() => {
+type ScheduleProps = { selectedEngineId: string };
+
+const Schedule = memo(({ selectedEngineId }: ScheduleProps) => {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const currentGameRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +63,7 @@ const Schedule = memo(() => {
         scrollToCurrentGame();
       }
     },
-    [scrollToCurrentGame],
+    [scrollToCurrentGame]
   );
 
   useEffect(() => {
@@ -75,6 +77,7 @@ const Schedule = memo(() => {
     event?.tournamentDetails.tNr,
     event?.tournamentDetails.schedule.present?.gameNr,
     selectedGame?.gameDetails.gameNr,
+    selectedEngineId,
     scrollToCurrentGame,
   ]);
 
@@ -125,6 +128,12 @@ const Schedule = memo(() => {
           const gameBlack = engines.find(
             (engine) => engine.id === game.blackId
           );
+
+          if (
+            selectedEngineId &&
+            ![gameWhite?.id, gameBlack?.id].includes(selectedEngineId)
+          )
+            return null;
 
           const whiteClass =
             game.outcome === "1-0"

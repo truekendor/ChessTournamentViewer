@@ -1,6 +1,6 @@
 import { memo, useMemo, useState, useEffect } from "react";
 import { Spin } from "antd";
-import { ConfigProvider, theme, TreeSelect } from "antd";
+import { TreeSelect } from "antd";
 import {
   useEventStore,
   PROVIDERS,
@@ -341,42 +341,29 @@ export const EventList = memo(function EventList() {
     !providerData.ccc?.eventList && !providerData.tcec?.eventList;
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgElevated: "#343434",
-          colorPrimary: "#fafafa",
-          controlOutline: "transparent",
-          colorPrimaryBg: "#4d4d4d",
+    <TreeSelect
+      className="eventListContainer"
+      style={{ width: "100%", height: "35px" }}
+      styles={{ popup: { root: { width: "0" } } }}
+      treeExpandAction="click"
+      treeData={treeData}
+      virtual={true}
+      popupMatchSelectWidth={false}
+      value={selectedValue}
+      onChange={handleChange}
+      treeNodeLabelProp="fullLabel"
+      treeDefaultExpandAll={false}
+      placeholder={isListLoading ? "Loading…" : "Select event"}
+      disabled={isListLoading}
+      suffixIcon={pendingEventId ? <Spin size="small" /> : undefined}
+      showSearch={{
+        filterTreeNode: (inputValue, treeNode) => {
+          const target = treeNode.fullLabel || treeNode.title || "";
+          return String(target)
+            .toLowerCase()
+            .includes(inputValue.toLowerCase());
         },
-        components: { TreeSelect: { indentSize: 14, switcherSize: 15 } },
       }}
-    >
-      <TreeSelect
-        className="eventListContainer"
-        style={{ width: "100%", height: "35px" }}
-        styles={{ popup: { root: { width: "0" } } }}
-        treeExpandAction="click"
-        treeData={treeData}
-        virtual={true}
-        popupMatchSelectWidth={false}
-        value={selectedValue}
-        onChange={handleChange}
-        treeNodeLabelProp="fullLabel"
-        treeDefaultExpandAll={false}
-        placeholder={isListLoading ? "Loading…" : "Select event"}
-        disabled={isListLoading}
-        suffixIcon={pendingEventId ? <Spin size="small" /> : undefined}
-        showSearch={{
-          filterTreeNode: (inputValue, treeNode) => {
-            const target = treeNode.fullLabel || treeNode.title || "";
-            return String(target)
-              .toLowerCase()
-              .includes(inputValue.toLowerCase());
-          },
-        }}
-      />
-    </ConfigProvider>
+    />
   );
 });

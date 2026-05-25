@@ -27,7 +27,8 @@ h4 {
 
 button,
 input,
-.button {
+.button,
+.ant-select {
   outline: none;
   border: 1px solid #232323;
   background: #323232;
@@ -35,6 +36,7 @@ input,
   cursor: pointer;
   border-radius: 4px;
   font-size: var(--font-sm);
+  line-height: 1.25;
 }
 
 .closeButton {

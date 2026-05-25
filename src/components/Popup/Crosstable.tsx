@@ -267,7 +267,7 @@ export const Crosstable = memo(() => {
         {engines.map((engine, i) => (
           <tr key={engine.id}>
             <td>
-              <EngineLogo engine={engine}/>
+              <EngineLogo engine={engine} />
               <p className="engineName">
                 #{i + 1}. {engine.name}
               </p>

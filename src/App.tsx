@@ -17,6 +17,7 @@ import { StandingsWindow } from "./components/StandingsWindow/StandingsWindow";
 import { BoardWindow } from "./components/BoardWindow/BoardWindow";
 import { ScheduleWindow } from "./components/ScheduleWindow/ScheduleWindow";
 import { Popup } from "./components/Popup/Popup";
+import { ConfigProvider, theme } from "antd";
 
 Chart.register(
   CategoryScale,
@@ -30,21 +31,34 @@ Chart.register(
 
 function App() {
   return (
-    <div className="app">
-      <Popup />
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgElevated: "#343434",
+          colorPrimary: "#fafafa",
+          controlOutline: "transparent",
+          colorPrimaryBg: "#4d4d4d",
+        },
+        components: { TreeSelect: { indentSize: 14, switcherSize: 15 } },
+      }}
+    >
+      <div className="app">
+        <Popup />
 
-      <EventListWindow />
+        <EventListWindow />
 
-      <EngineWindow />
+        <EngineWindow />
 
-      <BoardWindow />
+        <BoardWindow />
 
-      <StandingsWindow />
+        <StandingsWindow />
 
-      <GraphWindow />
+        <GraphWindow />
 
-      <ScheduleWindow />
-    </div>
+        <ScheduleWindow />
+      </div>
+    </ConfigProvider>
   );
 }
 
