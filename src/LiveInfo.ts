@@ -1,9 +1,9 @@
 import type { DrawShape } from "@lichess-org/chessground/draw";
-import { Chess960, type Color, type Square } from "./chess.js/chess";
 import type { CCCEngine, CCCLiveInfo } from "./types";
-import { sanToUci, uciToSan } from "./utils";
+import { createWasmChess, sanToUci, uciToSan } from "./utils";
 import z from "zod";
 import { liveInfoSchema } from "./schemas/tcec/liveInfoSchema";
+import type { ColorChar, SquareStr, WasmChess } from "./chess.wasm/chess_wasm";
 
 export type EngineColor = "white" | "black" | "red" | "blue" | "green";
 export type LiveInfoEntry = CCCLiveInfo | undefined;
@@ -21,6 +21,8 @@ export type LiveEngineDataEntry = Record<
   EngineColor,
   LiveEngineDataEntryObject
 >;
+
+const _CHESS = createWasmChess();
 
 export const EmptyEngineDefinition: CCCEngine = {
   authors: "",
@@ -129,7 +131,7 @@ export function parseTCECLiveInfo(
 export function getLiveInfosForMove(
   liveEngineData: LiveEngineData,
   moveNumber: number,
-  turn: Color
+  turn: ColorChar
 ) {
   function kibitzer(base: LiveInfoEntry, color: "red" | "green" | "blue") {
     const array = liveEngineData[color].liveInfo;
@@ -190,7 +192,8 @@ export function extractLiveInfoFromTCECComment(
     score = "+" + score;
   }
 
-  const tmpGame = new Chess960(fenBeforeMove);
+  _CHESS.load(fenBeforeMove);
+  const tmpGame = _CHESS;
   const isWhite = tmpGame.turn() === "w";
   const sanMoves = data[data.findIndex((s) => s.startsWith("pv="))]
     .replace("pv=", "")
@@ -232,7 +235,7 @@ export function extractLiveInfoFromTCECComment(
   return liveInfo;
 }
 
-function extractLiveInfoFromTCECGame(game: Chess960) {
+function extractLiveInfoFromTCECGame(game: WasmChess) {
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];
 
@@ -262,21 +265,23 @@ function extractLiveInfoFromTCECGame(game: Chess960) {
   return { liveInfosWhite, liveInfosBlack };
 }
 
-export function getTimeControl(game: Chess960) {
-  const timeControl = game.getHeaders()["TimeControl"];
+export function getTimeControl(game: WasmChess) {
+  const timeControl = game.getHeaders().get("TimeControl");
   if (!timeControl) return { tcBase: 0, tcIncrement: 0 };
   const tcBase = 1000 * Number(timeControl.split("+")[0]);
   const tcIncrement = 1000 * Number(timeControl.split("+")[1]);
   return { tcBase, tcIncrement };
 }
 
-export function extractLiveInfoFromGame(game: Chess960) {
-  if (game.getHeaders()["Site"]?.includes("tcec"))
+export function extractLiveInfoFromGame(game: WasmChess) {
+  const headers = game.getHeaders();
+
+  if (headers.get("Site")?.includes("tcec"))
     return extractLiveInfoFromTCECGame(game);
 
   const { tcBase, tcIncrement } = getTimeControl(game);
 
-  const startingFen = game.getHeaders()["FEN"] ?? "";
+  const startingFen = headers.get("FEN") ?? "";
 
   const liveInfosWhite: LiveInfoEntry[] = [];
   const liveInfosBlack: LiveInfoEntry[] = [];
@@ -372,8 +377,8 @@ export function extractLiveInfoFromInfoString(
   const arrow: DrawShape | null =
     bestmove && bestmove.length >= 4
       ? {
-          orig: bestmove.slice(0, 2) as Square,
-          dest: bestmove.slice(2, 4) as Square,
+          orig: bestmove.slice(0, 2) as SquareStr,
+          dest: bestmove.slice(2, 4) as SquareStr,
           brush,
         }
       : null;

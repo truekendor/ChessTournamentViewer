@@ -1,10 +1,10 @@
 import { memo, useState } from "react";
-import { Chess } from "../../chess.js/chess";
 import { useEventStore } from "../../context/EventContext";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { MoveList } from "../MoveList";
 import { shallow } from "zustand/shallow";
 import { useInterval } from "../../hooks/useInterval";
+import { DEFAULT_POSITION } from "@/utils";
 
 const LiveMoveList = memo(() => {
   const activeGame = useEventStore((state) => state.activeGame);
@@ -32,13 +32,13 @@ const LiveMoveList = memo(() => {
   const pgnHeaders = game.getHeaders();
   const termination =
     activeGame?.gameDetails?.termination ??
-    pgnHeaders["Termination"] ??
-    pgnHeaders["TerminationDetails"];
-  const result = pgnHeaders["Result"];
+    pgnHeaders.get("Termination") ??
+    pgnHeaders.get("TerminationDetails");
+  const result = pgnHeaders.get("Result");
 
   return (
     <MoveList
-      startFen={game.getHeaders()["FEN"] ?? new Chess().fen()}
+      startFen={pgnHeaders.get("FEN") ?? DEFAULT_POSITION}
       moves={moves}
       currentMoveNumber={currentMoveNumber}
       setCurrentMoveNumber={useLiveInfo.getState().setCurrentMoveNumber}
