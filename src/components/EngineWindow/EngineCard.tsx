@@ -2,8 +2,13 @@ import { useMemo, memo, useEffect, useState } from "react";
 import "./EngineCard.css";
 import { SkeletonBlock, SkeletonText } from "../Loading";
 import { MoveList } from "../MoveList";
-import { buildPvGame, normalizePv } from "../../utils";
-import { Chess, Chess960 } from "../../chess.js/chess";
+import {
+  buildPvGame,
+  createWasmChess,
+  DEFAULT_POSITION,
+  formatLargeNumber,
+  normalizePv,
+} from "../../utils";
 import { useMediaQuery } from "react-responsive";
 import { useKibitzerBoard } from "../../hooks/BoardHook";
 import type { EngineColor } from "../../LiveInfo";
@@ -11,25 +16,9 @@ import { useLiveInfo } from "../../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 import { useInterval } from "../../hooks/useInterval";
 
+const _CHESS = createWasmChess();
+
 type EngineCardProps = { color: EngineColor };
-
-export function formatLargeNumber(value?: string) {
-  if (!value) return "-";
-  const x = Number(value);
-  if (isNaN(x)) return "-";
-  if (x >= 1_000_000_000) return (x / 1_000_000_000).toFixed(2) + "B";
-  if (x >= 1_000_000) return (x / 1_000_000).toFixed(2) + "M";
-  if (x >= 1_000) return (x / 1_000).toFixed(2) + "K";
-  return x.toFixed(2);
-}
-
-export function formatTime(time: number) {
-  if (time < 0) time = 0;
-  const hundreds = String(Math.floor(time / 100) % 10).padEnd(2, "0");
-  const seconds = String(Math.floor(time / 1000) % 60).padStart(2, "0");
-  const minutes = String(Math.floor(time / (1000 * 60))).padStart(2, "0");
-  return `${minutes}:${seconds}.${hundreds}`;
-}
 
 const EngineCard = memo(({ color }: EngineCardProps) => {
   const state = useLiveInfo.getState();
@@ -37,7 +26,7 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
   const [fen, setFen] = useState(state.currentFen);
   const [time, setTime] = useState(1);
   const [pvDisagreementPoint, setPvDisagreementPoint] = useState<number>();
-  const [_, setDepth] = useState<number>();
+  const setDepth = useState<number>()[1];
 
   useInterval((state) => {
     setFen(state.currentFen);
@@ -85,7 +74,7 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
   useEffect(() => {
     if (!fen || !moves) return;
 
-    game.current = buildPvGame(fen, moves, -1);
+    buildPvGame(game.current, fen, moves, -1);
     setCurrentFen(game.current.fen());
     setCurrentMoveNumber(-1);
   }, [moves]);
@@ -105,8 +94,10 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
 
   const isMobile = useMediaQuery({ maxWidth: 1400 });
 
-  const safeFen = fen ?? new Chess().fen();
-  const moveNumberOffset = new Chess960(safeFen).moveNumber() - 1;
+  const safeFen = fen ?? DEFAULT_POSITION;
+
+  _CHESS.load(safeFen);
+  const moveNumberOffset = _CHESS.moveNumber() - 1;
 
   return (
     <div className={`engineComponent ${loading ? "loading" : ""}`}>

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Chess960 } from "../../chess.js/chess";
 import type { LiveEngineDataEntry } from "../../LiveInfo";
-import { normalizePv, buildPvGame } from "../../utils";
+import { normalizePv, buildPvGame, createWasmChess } from "../../utils";
 import { SkeletonBlock, SkeletonText } from "../Loading";
 import { MoveList } from "../MoveList";
 import "./EnginePV.css";
@@ -9,6 +8,8 @@ import { useKibitzerBoard } from "../../hooks/BoardHook";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { shallow } from "zustand/shallow";
 import { useInterval } from "../../hooks/useInterval";
+
+const _CHESS = createWasmChess();
 
 type EnginePVProps = { color: keyof LiveEngineDataEntry };
 
@@ -50,13 +51,15 @@ export function EnginePV({ color }: EnginePVProps) {
       if (shallow(moves, previous)) return previous;
 
       setCurrentMoveNumber(-1);
-      game.current = buildPvGame(state.currentFen, moves, -1);
+      buildPvGame(game.current, state.currentFen, moves, -1);
       setCurrentFen(game.current.fen());
       return moves;
     });
   });
 
-  const moveNumberOffset = new Chess960(fen).moveNumber() - 1;
+  _CHESS.load(fen);
+
+  const moveNumberOffset = _CHESS.moveNumber() - 1;
 
   if (!moves) {
     return (

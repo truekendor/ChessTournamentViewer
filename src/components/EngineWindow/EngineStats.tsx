@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { EngineColor, LiveEngineDataEntry } from "../../LiveInfo";
 import type { CCCLiveInfo } from "../../types";
-import { formatLargeNumber } from "./EngineCard";
 import "./EngineStats.css";
 import { useInterval } from "../../hooks/useInterval";
 import { shallow } from "zustand/shallow";
 import { SkeletonText } from "../Loading";
+import { formatLargeNumber } from "@/utils";
 
 type EngineStatsProps = { colors: readonly (keyof LiveEngineDataEntry)[] };
 

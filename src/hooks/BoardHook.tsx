@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Chess960 } from "../chess.js/chess";
 import {
   Board as BoardComponent,
   type BoardHandle,
@@ -7,6 +6,7 @@ import {
 } from "../components/BoardWindow/Board";
 import { useLiveInfo } from "../context/LiveInfoContext";
 import { getLiveInfosForMove } from "../LiveInfo";
+import { createWasmChess } from "@/utils";
 
 export function useLiveBoard({ animated, id }: BoardProps) {
   const boardHandle = useRef<BoardHandle>(null);
@@ -20,7 +20,7 @@ export function useLiveBoard({ animated, id }: BoardProps) {
       getLiveInfosForMove(
         liveEngineData,
         currentMoveNumber,
-        game.turnAt(currentMoveNumber)
+        game.sideToMoveAt(currentMoveNumber)
       ),
       bypassRateLimit
     );
@@ -34,7 +34,7 @@ export function useLiveBoard({ animated, id }: BoardProps) {
 
 export function useKibitzerBoard({ animated, id }: BoardProps) {
   const [boardHandle, setBoardHandle] = useState<BoardHandle | null>(null);
-  const game = useRef(new Chess960());
+  const game = useRef(createWasmChess());
 
   const [currentMoveNumber, setCurrentMoveNumber] = useState(-1);
   const [currentFen, setCurrentFen] = useState(game.current.fen());
