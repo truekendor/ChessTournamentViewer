@@ -111,12 +111,20 @@ export const BoardWindow = memo(() => {
           const wEngine =
             engines.find(
               (engine) => engine.id === game.getHeaders()["White"]
-            ) || EmptyEngineDefinition;
+            ) ||
+            engines.find(
+              (engine) => engine.name === game.getHeaders()["White"]
+            ) ||
+            EmptyEngineDefinition;
 
           const bEngine =
             engines.find(
               (engine) => engine.id === game.getHeaders()["Black"]
-            ) || EmptyEngineDefinition;
+            ) ||
+            engines.find(
+              (engine) => engine.name === game.getHeaders()["Black"]
+            ) ||
+            EmptyEngineDefinition;
 
           liveInfoState.setLiveEngineData("white", {
             liveInfo: liveInfosWhite,
