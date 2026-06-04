@@ -105,27 +105,22 @@ export const BoardWindow = memo(() => {
 
           const headers = game.getHeaders();
 
+          const wName = headers.get("White");
+          const bName = headers.get("Black");
+
           // Load white + black engine live info
           const { liveInfosBlack, liveInfosWhite } =
             extractLiveInfoFromGame(game);
           const engines =
             eventState.activeEvent?.tournamentDetails.engines ?? [];
           const wEngine =
-            engines.find(
-              (engine) => engine.id === headers.get("White")
-            ) ||
-            engines.find(
-              (engine) => engine.name === headers.get("White")
-            ) ||
+            engines.find((engine) => engine.id === wName) ||
+            engines.find((engine) => engine.name === wName) ||
             EmptyEngineDefinition;
 
           const bEngine =
-            engines.find(
-              (engine) => engine.id === headers.get("Black")
-            ) ||
-            engines.find(
-              (engine) => engine.name === headers.get("Black")
-            ) ||
+            engines.find((engine) => engine.id === bName) ||
+            engines.find((engine) => engine.name === bName) ||
             EmptyEngineDefinition;
 
           liveInfoState.setLiveEngineData("white", {
