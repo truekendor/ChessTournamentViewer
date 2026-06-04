@@ -2,14 +2,21 @@ import { useMemo, memo, useEffect, useState } from "react";
 import "./EngineCard.css";
 import { SkeletonBlock, SkeletonText } from "../Loading";
 import { MoveList } from "../MoveList";
-import { buildPvGame, formatLargeNumber, normalizePv } from "../../utils";
-import { Chess, Chess960 } from "../../chess.js/chess";
+import {
+  buildPvGame,
+  createWasmChess,
+  DEFAULT_POSITION,
+  formatLargeNumber,
+  normalizePv,
+} from "../../utils";
 import { useMediaQuery } from "react-responsive";
 import { useKibitzerBoard } from "../../hooks/BoardHook";
 import type { EngineColor } from "../../LiveInfo";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { EngineMinimal } from "./EngineMinimal";
 import { useInterval } from "../../hooks/useInterval";
+
+const _CHESS = createWasmChess();
 
 type EngineCardProps = { color: EngineColor };
 
@@ -19,8 +26,7 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
   const [fen, setFen] = useState(state.currentFen);
   const [time, setTime] = useState(1);
   const [pvDisagreementPoint, setPvDisagreementPoint] = useState<number>();
-  const [depth, setDepth] = useState<number>();
-  void depth;
+  const setDepth = useState<number>()[1];
 
   useInterval((state) => {
     setFen(state.currentFen);
@@ -68,7 +74,7 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
   useEffect(() => {
     if (!fen || !moves) return;
 
-    game.current = buildPvGame(fen, moves, -1);
+    buildPvGame(game.current, fen, moves, -1);
     setCurrentFen(game.current.fen());
     setCurrentMoveNumber(-1);
   }, [moves, fen, game, setCurrentFen, setCurrentMoveNumber]);
@@ -88,8 +94,10 @@ const EngineCard = memo(({ color }: EngineCardProps) => {
 
   const isMobile = useMediaQuery({ maxWidth: 1400 });
 
-  const safeFen = fen ?? new Chess().fen();
-  const moveNumberOffset = new Chess960(safeFen).moveNumber() - 1;
+  const safeFen = fen ?? DEFAULT_POSITION;
+
+  _CHESS.load(safeFen);
+  const moveNumberOffset = _CHESS.moveNumber() - 1;
 
   return (
     <div className={`engineComponent ${loading ? "loading" : ""}`}>

@@ -1,15 +1,48 @@
-import { Chess960 } from "./chess.js/chess";
-import { movesToSan, movesToLan } from "labut";
 import type { CCCLiveInfo } from "./types";
+
+import initChess, {
+  movesToSan,
+  movesToUci,
+  WasmChess,
+} from "./chess.wasm/chess_wasm";
+
+await initChess();
+
+export function createWasmChess(fen?: string): WasmChess {
+  return new WasmChess(fen);
+}
+
+export const DEFAULT_POSITION =
+  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+const _CHESS = createWasmChess();
+
+export function getGameAtMoveNumber(
+  fen: string,
+  moves: string[],
+  moveNumber: number
+) {
+  _CHESS.load(fen);
+  const game = _CHESS;
+
+  for (
+    let i = 0;
+    (i < moveNumber || moveNumber === -1) && i < moves.length;
+    i++
+  ) {
+    if (!game.legalMovesSan().includes(moves[i])) break;
+    game.move(moves[i]);
+  }
+  return game;
+}
 
 export function uciToSan(fen: string, moves: string[]): string[] {
   // some engines report stuff after the pv, starting with "string"
   const sliceEnd = moves.includes("string")
     ? moves.indexOf("string")
     : undefined;
-  const result = movesToSan(fen, moves.slice(0, sliceEnd)).moves.map(
-    (m) => m.san
-  );
+  const result = movesToSan(moves.slice(0, sliceEnd), fen).moves;
+
   if (result.length !== (sliceEnd ?? moves.length) && moves.length > 0) {
     console.warn(
       "uciToSan() produced mismatching pv lengths",
@@ -22,7 +55,7 @@ export function uciToSan(fen: string, moves: string[]): string[] {
 }
 
 export function sanToUci(fen: string, moves: string[]): string[] {
-  const result = movesToLan(fen, moves).moves.map((m) => m.lan);
+  const result = movesToUci(moves, fen).moves;
   if (result.length !== moves.length) {
     console.warn(
       "sanToUci() produced mismatching pv lengths",
@@ -35,11 +68,12 @@ export function sanToUci(fen: string, moves: string[]): string[] {
 }
 
 export function buildPvGame(
+  game: WasmChess,
   fen: string,
   moves: string[],
   pvMoveNumber: number
 ) {
-  const game = new Chess960(fen);
+  game.load(fen);
 
   for (let i = 0; i < moves.length; i++) {
     if (pvMoveNumber !== -1 && i > pvMoveNumber) {
@@ -50,17 +84,11 @@ export function buildPvGame(
     if (!san) break;
 
     try {
-      const result = game.move(san, { strict: false });
-
-      if (!result) {
-        break;
-      }
+      game.move(san);
     } catch {
       break;
     }
   }
-
-  return game;
 }
 
 // Normalize a PV so it always starts from the current position (fen's turn).

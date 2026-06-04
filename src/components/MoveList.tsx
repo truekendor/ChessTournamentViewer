@@ -6,13 +6,13 @@ import {
   MdKeyboardDoubleArrowRight,
 } from "react-icons/md";
 import "./MoveList.css";
-import { Chess960 } from "../chess.js/chess";
 import {
   LuClipboard,
   LuClipboardList,
   LuDatabase,
   LuDownload,
 } from "react-icons/lu";
+import { getGameAtMoveNumber } from "@/utils";
 
 type MoveListProps = {
   startFen: string;
@@ -25,20 +25,6 @@ type MoveListProps = {
   controllers: boolean;
   disagreementMoveIndex?: number;
 };
-
-function getGameAtMoveNumber(fen: string, moves: string[], moveNumber: number) {
-  const game = new Chess960(fen);
-
-  for (
-    let i = 0;
-    (i < moveNumber || moveNumber === -1) && i < moves.length;
-    i++
-  ) {
-    if (!game.moves().includes(moves[i])) break;
-    game.move(moves[i], { strict: false });
-  }
-  return game;
-}
 
 function moveClass(active: boolean, disagreement: boolean, bookMove: boolean) {
   return (

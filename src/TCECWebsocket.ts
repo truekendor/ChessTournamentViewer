@@ -11,7 +11,6 @@ import type {
   CCCGameUpdate,
   CCCMessage,
 } from "./types";
-import { Chess960 } from "./chess.js/chess";
 import {
   EmptyEngineDefinition,
   extractLiveInfoFromInfoString,
@@ -25,6 +24,10 @@ import { kibitzerSchema } from "./schemas/tcec/kibitzerSchema";
 import { socketPgnSchema } from "./schemas/tcec/socketPgnSchema";
 import { eventListSchema } from "./schemas/tcec/eventListSchema";
 import { livePGNSchema } from "./schemas/tcec/pgnSchema";
+import { createWasmChess } from "./utils";
+import type { WasmChess } from "./chess.wasm/chess_wasm";
+
+const _CHESS = createWasmChess();
 
 export class TCECWebSocket implements TournamentWebSocket {
   private socket: SocketIOClient.Socket | null = null;
@@ -32,7 +35,7 @@ export class TCECWebSocket implements TournamentWebSocket {
   private connected: boolean = false;
 
   private live: boolean = true;
-  private game: Chess960 = new Chess960();
+  private game: WasmChess = createWasmChess();
   private event: CCCEventUpdate | null = null;
 
   async send(msg: SocketMessageFromClient) {
@@ -79,7 +82,7 @@ export class TCECWebSocket implements TournamentWebSocket {
 
         const { crosstable, pgn, schedule } = validationResult;
 
-        const game = new Chess960();
+        const game = _CHESS;
         try {
           if (pgnParsed) {
             game.loadPgn(pgn);
@@ -90,8 +93,10 @@ export class TCECWebSocket implements TournamentWebSocket {
           return;
         }
 
+        const headers = game.getHeaders();
+
         // Round is needed for the kibitzer endpoints
-        const round = game.getHeaders()["Round"];
+        const round = headers.get("Round");
         // The schedule link is different for the ongoing event
         const isLive =
           crosstable.Event.replaceAll(" ", "_").toLowerCase() ===
@@ -124,7 +129,7 @@ export class TCECWebSocket implements TournamentWebSocket {
         );
       } else if (gameNr) {
         const safeEventNr = toTitleCaseTCEC(
-          eventNr ?? this.game.getHeaders()["Event"]
+          eventNr ?? this.game.getHeaders().get("Event") ?? "?"
         );
 
         const pgn = await fetch(
@@ -139,7 +144,7 @@ export class TCECWebSocket implements TournamentWebSocket {
         this.live = false;
         this.openGame(gameNr, pgn);
 
-        const game = new Chess960();
+        const game = _CHESS;
 
         try {
           game.loadPgn(pgn);
@@ -150,7 +155,7 @@ export class TCECWebSocket implements TournamentWebSocket {
           return;
         }
 
-        const round = game.getHeaders()["Round"];
+        const round = game.getHeaders().get("Round");
 
         const [lc0Response, sfResponse] = await Promise.allSettled([
           fetch(
@@ -206,7 +211,10 @@ export class TCECWebSocket implements TournamentWebSocket {
       }
 
       const opponentName =
-        this.game.getHeaders()[this.game.turn() === "w" ? "Black" : "White"];
+        this.game
+          .getHeaders()
+          .get(this.game.turn() === "w" ? "Black" : "White") ?? "?"; // to make typescript happy
+
       const latestUsefulLine = validationResult.data.data
         .split("\n")
         .filter(
@@ -322,7 +330,7 @@ export class TCECWebSocket implements TournamentWebSocket {
 
       if (!this.live) return;
 
-      if (this.live && this.game.getHeaders()["Result"] !== "*") {
+      if (this.live && this.game.getHeaders().get("Result") !== "*") {
         this.disconnect();
         this.connect(this.callback ?? function () {});
         return;
@@ -331,13 +339,12 @@ export class TCECWebSocket implements TournamentWebSocket {
       const pgnData = pgnValidation.data;
 
       // For some reason, the halfmove numbers sometimes differ
-      const fenParts = this.game
-        .fen({ forceEnpassantSquare: false })
-        .split(" ");
+      const fenParts = this.game.fen().split(" ");
       const fen = fenParts.slice(0, -2).join(" ") + " " + fenParts.at(-1);
 
       const ignoreIndex = pgnData.Moves.findIndex((moveData) => {
-        const moveFenParts = new Chess960(moveData.fen).fen().split(" ");
+        _CHESS.load(moveData.fen);
+        const moveFenParts = _CHESS.fen().split(" ");
         const moveFen =
           moveFenParts.slice(0, -2).join(" ") + " " + moveFenParts.at(-1);
         return fen === moveFen;
@@ -351,7 +358,7 @@ export class TCECWebSocket implements TournamentWebSocket {
 
         // Make the move
         const move = this.game
-          .moves({ verbose: true })
+          .legalMovesVerbose()
           .find((move) => move.san === moveData.m);
 
         if (!move) break;
@@ -360,7 +367,7 @@ export class TCECWebSocket implements TournamentWebSocket {
         if (this.game.turn() === "w") wtime = moveData.tl;
         else btime = moveData.tl;
 
-        this.game.move(move.san, { strict: false });
+        this.game.move(move.san);
 
         this.callback?.({
           type: "newMove",
@@ -499,14 +506,12 @@ export class TCECWebSocket implements TournamentWebSocket {
     lc0: z.infer<typeof kibitzerSchema> | undefined | null,
     sf: z.infer<typeof kibitzerSchema> | undefined | null
   ) {
+    const headers = this.game.getHeaders();
+
     const lc0Valid =
-      lc0 &&
-      String(lc0.round) === this.game.getHeaders()["Round"] &&
-      "desc" in lc0;
+      lc0 && String(lc0.round) === headers.get("Round") && "desc" in lc0;
     const sfValid =
-      sf &&
-      String(sf.round) === this.game.getHeaders()["Round"] &&
-      "desc" in sf;
+      sf && String(sf.round) === headers.get("Round") && "desc" in sf;
 
     if (lc0Valid && lc0.desc) {
       this.callback?.({
@@ -803,8 +808,10 @@ export class TCECWebSocket implements TournamentWebSocket {
       return;
     }
 
-    const white = this.game.getHeaders()["White"];
-    const black = this.game.getHeaders()["Black"];
+    const headers = this.game.getHeaders();
+
+    const white = headers.get("White")?.split(" ")[0] ?? "?";
+    const black = headers.get("Black")?.split(" ")[0] ?? "?";
     this.game.setHeader("White", white);
     this.game.setHeader("Black", black);
 
