@@ -111,11 +111,21 @@ export const BoardWindow = memo(() => {
           const engines =
             eventState.activeEvent?.tournamentDetails.engines ?? [];
           const wEngine =
-            engines.find((engine) => engine.name === headers.get("White")) ||
+            engines.find(
+              (engine) => engine.id === headers.get("White")
+            ) ||
+            engines.find(
+              (engine) => engine.name === headers.get("White")
+            ) ||
             EmptyEngineDefinition;
 
           const bEngine =
-            engines.find((engine) => engine.name === headers.get("Black")) ||
+            engines.find(
+              (engine) => engine.id === headers.get("Black")
+            ) ||
+            engines.find(
+              (engine) => engine.name === headers.get("Black")
+            ) ||
             EmptyEngineDefinition;
 
           liveInfoState.setLiveEngineData("white", {

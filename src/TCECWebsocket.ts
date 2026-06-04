@@ -638,11 +638,20 @@ export class TCECWebSocket implements TournamentWebSocket {
 
     const { crosstable, pgn, schedule } = result;
 
+    const duplicateEngineNames =
+      new Set(
+        Object.keys(crosstable.Table).map(
+          (engineName) => engineName.split(" ")[0]
+        )
+      ).size !== Object.keys(crosstable.Table).length;
+    function getDisplayName(name: string) {
+      if (duplicateEngineNames) return name;
+      return name.split(" ")[0];
+    }
+
     const engines: CCCEngine[] = Object.keys(crosstable.Table).map(
       (engineName) => {
         const engineData = crosstable.Table[engineName];
-        const correctName = engineName.split(" ")[0];
-        const engineVersion = engineName.split(" ").slice(1).join(" ");
 
         return {
           authors: "",
@@ -651,18 +660,18 @@ export class TCECWebSocket implements TournamentWebSocket {
           elo: String(engineData.Rating),
           facts: "",
           flag: "",
-          id: correctName,
+          id: engineName,
           imageUrl:
             "https://ctv.yoshie2000.de/tcec/image/engine/" +
-            correctName +
+            engineName.split(" ")[0] +
             ".png",
-          name: correctName,
+          name: getDisplayName(engineName),
           perf: String(engineData.Performance),
           playedGames: "",
           points: String(engineData.Score),
           rating: String(engineData.Rating),
           updatedAt: "",
-          version: engineVersion,
+          version: engineName.split(" ").slice(1).join(" "),
           website: "",
           year: "",
         };
@@ -690,14 +699,11 @@ export class TCECWebSocket implements TournamentWebSocket {
         const gameStarted = "Result" in game;
         const gameOver = "Result" in game && game.Result !== "*";
 
-        const black = game.Black.split(" ")[0];
-        const white = game.White.split(" ")[0];
-
         const opening = "Opening" in game ? game.Opening : "unknown";
 
         return {
-          blackId: black,
-          blackName: black,
+          blackId: game.Black,
+          blackName: getDisplayName(game.Black),
           estimatedStartTime: "",
           gameNr: String(index + 1),
           matchNr: "",
@@ -706,8 +712,8 @@ export class TCECWebSocket implements TournamentWebSocket {
           roundNr: "unknown", // we do not have `game.Round` in TCEC I think
           timeControl: "",
           variant: "",
-          whiteId: white,
-          whiteName: white,
+          whiteId: game.White,
+          whiteName: getDisplayName(game.White),
           outcome: gameOver ? game.Result : undefined,
           timeEnd: gameOver
             ? new Date(startDate.getTime() + duration).toString()
