@@ -23,10 +23,10 @@ export function GameResultOverlay() {
       const pgnHeaders = state.game.getHeaders();
       const termination =
         activeGame?.gameDetails?.termination ??
-        pgnHeaders["Termination"] ??
-        pgnHeaders["TerminationDetails"] ??
+        pgnHeaders.get("Termination") ??
+        pgnHeaders.get("TerminationDetails") ??
         "";
-      const result = pgnHeaders["Result"];
+      const result = pgnHeaders.get("Result");
 
       return { termination, result };
     })
