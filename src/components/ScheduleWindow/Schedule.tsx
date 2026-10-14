@@ -1,23 +1,11 @@
 import { memo, useCallback, useEffect, useRef } from "react";
-import { EngineLogo } from "../EngineWindow/EngineLogo";
 import "./Schedule.css";
 import { MdOutlineClose } from "react-icons/md";
 import { useEventStore } from "../../context/EventContext";
 import { useLiveInfo } from "../../context/LiveInfoContext";
 import { getTimeControl } from "../../LiveInfo";
 import { Button } from "@douyinfe/semi-ui";
-
-function formatDuration(value: number) {
-  if (value === 1) return `ìn 1 minute`;
-  if (value < 60) return `in ${value.toFixed(0)} minutes`;
-  value = Math.round(value / 60);
-  if (value === 1) return `in 1 hour`;
-  return `in ${value.toFixed(0)} hours`;
-}
-
-function formatOutcome(outcome: string) {
-  return outcome.replace(/-/, "\u2013"); // en dash
-}
+import { ScheduleEntry } from "./ScheduleEntry";
 
 type ScheduleProps = { selectedEngineId: string };
 
@@ -65,6 +53,42 @@ const Schedule = memo(({ selectedEngineId }: ScheduleProps) => {
       }
     },
     [scrollToCurrentGame]
+  );
+
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (!(event.target instanceof HTMLElement)) {
+        return;
+      }
+
+      const target = event.target.closest<HTMLDivElement>("div.game");
+
+      if (!target) {
+        return;
+      }
+
+      const { dataset } = target;
+
+      const finishedGameClicked = dataset.liveAndNotSelected;
+      const outcome = dataset.outcome;
+
+      const futureGameClicked = !(outcome || finishedGameClicked);
+
+      if (futureGameClicked) {
+        return;
+      }
+
+      const gameNr = dataset.gameNumber;
+
+      userClickedRef.current = true;
+
+      if (!finishedGameClicked) {
+        requestEvent();
+      } else {
+        requestEvent(gameNr);
+      }
+    },
+    [requestEvent]
   );
 
   useEffect(() => {
@@ -133,87 +157,31 @@ const Schedule = memo(({ selectedEngineId }: ScheduleProps) => {
           if (
             selectedEngineId &&
             ![gameWhite?.id, gameBlack?.id].includes(selectedEngineId)
-          )
+          ) {
             return null;
-
-          const whiteClass =
-            game.outcome === "1-0"
-              ? "winner"
-              : game.outcome === "0-1"
-                ? "loser"
-                : game.timeEnd
-                  ? "draw"
-                  : "tbd";
-          const blackClass =
-            game.outcome === "1-0"
-              ? "loser"
-              : game.outcome === "0-1"
-                ? "winner"
-                : game.timeEnd
-                  ? "draw"
-                  : "tbd";
+          }
 
           const isLiveGame =
             game.gameNr === event.tournamentDetails.schedule.present?.gameNr;
           const isSelectedGame =
             game.gameNr === String(selectedGame.gameDetails.gameNr);
-          const ref = isSelectedGame ? currentGameCallbackRef : null;
-
-          let gameClass = "";
-          gameClass += !game.outcome && !isLiveGame ? " future" : "";
-          gameClass += isSelectedGame ? " active" : "";
-          gameClass += isLiveGame ? " live" : "";
-
-          const isLastOfRound =
-            event.tournamentDetails.isRoundRobin &&
-            gamesPerRound > 2 &&
-            (i + 1) % gamesPerRound === 0;
-          gameClass += isLastOfRound ? " lastOfRound" : "";
-
-          const vsText = isLiveGame
-            ? "vs."
-            : game.outcome
-              ? formatOutcome(game.outcome)
-              : formatDuration(averageDuration * (i - currentGameIdx));
-
-          const ongoingAndNotSelectedGame = isLiveGame && !isSelectedGame;
 
           return (
-            <div
-              className={"game" + gameClass}
-              ref={ref}
+            <ScheduleEntry
+              onClick={handleClick}
               key={game.gameNr}
-              onClick={
-                game.outcome || ongoingAndNotSelectedGame
-                  ? () => {
-                      userClickedRef.current = true;
-
-                      if (ongoingAndNotSelectedGame) {
-                        requestEvent();
-                      } else {
-                        requestEvent(game.gameNr);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              <span className="round">#{i + 1}</span>
-              <EngineLogo engine={gameWhite} size={28} />
-              <span
-                className={"engineName " + whiteClass}
-                title={gameWhite?.name}
-              >
-                {gameWhite?.name}
-              </span>
-              <span className="vs">{vsText}</span>
-              <span
-                className={"engineName " + blackClass}
-                title={gameBlack?.name}
-              >
-                {gameBlack?.name}
-              </span>
-              <EngineLogo engine={gameBlack} size={28} />
-            </div>
+              game={game}
+              roundIndex={i}
+              gameWhite={gameWhite}
+              gameBlack={gameBlack}
+              isLiveGame={isLiveGame}
+              isSelectedGame={isSelectedGame}
+              averageDuration={averageDuration}
+              currentGameIdx={currentGameIdx}
+              gamesPerRound={gamesPerRound}
+              isRoundRobin={event.tournamentDetails.isRoundRobin ?? false}
+              entryRef={isSelectedGame ? currentGameCallbackRef : null}
+            />
           );
         })}
       </div>
