@@ -22,7 +22,7 @@ type ScheduleEntryProps = {
 };
 
 function formatDuration(value: number) {
-  if (value === 1) return `ìn 1 minute`;
+  if (value === 1) return `in 1 minute`;
   if (value < 60) return `in ${value.toFixed(0)} minutes`;
   value = Math.round(value / 60);
   if (value === 1) return `in 1 hour`;
