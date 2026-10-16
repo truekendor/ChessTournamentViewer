@@ -20,6 +20,51 @@ function downloadLogLines(lines: string[], gameIndex: number) {
   URL.revokeObjectURL(url);
 }
 
+async function downloadGameLogs(
+  stream: ReadableStream<Uint8Array>,
+  gameIndex: number
+) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let tail = "";
+
+  const buffer: string[] = [];
+  let isCurrentGame = false;
+  let finished = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = tail + decoder.decode(value, { stream: true });
+    const lines = chunk.split("\n");
+    tail = lines.pop()!; // Last element is a partial line, prepend it next turn
+
+    for (const line of lines) {
+      if (line.startsWith(`Started game ${gameIndex} `)) isCurrentGame = true;
+
+      // Keep one game in the buffer at a time
+      buffer.push(line);
+      if (line.startsWith(`Finished`)) {
+        if (isCurrentGame) {
+          finished = true;
+          break;
+        }
+
+        buffer.length = 0;
+      }
+    }
+
+    if (finished) {
+      // Abort the rest of the request
+      await reader.cancel();
+      break;
+    }
+  }
+
+  downloadLogLines(buffer, gameIndex);
+}
+
 export default function LogDownloadButton() {
   const [loading, setLoading] = useState(false);
 
@@ -52,124 +97,34 @@ export default function LogDownloadButton() {
   }
 
   if (activeProvider === "tcec") {
-    // For live events, pull the data from https://tcec-chess.com/live.log
-    if (isEventRunning) {
-      return (
-        <Button
-          title="Download UCI logs"
-          disabled={loading}
-          onClick={() => {
-            setLoading(true);
+    return (
+      <Button
+        title="Download UCI logs"
+        onClick={async () => {
+          setLoading(true);
+          const gameIndex = Number(activeGame?.gameDetails.gameNr);
 
-            fetch("https://ctv.yoshie2000.de/tcec/live.log")
-              .then((response) => response.text())
-              .then((text) => text.split("\n"))
-              .then((lines) => {
-                const gameIndex = Number(activeGame?.gameDetails.gameNr);
-
-                // Find starting and ending window (not exact)
-                let startIndex = lines.findIndex((line) =>
-                  line.includes(`Started game ${gameIndex} `)
-                );
-                let endIndex = lines.findIndex((line) =>
-                  line.includes(`Started game ${gameIndex + 1} `)
-                );
-                if (endIndex === -1) endIndex = lines.length;
-
-                // Walk backwards to find end of previous game
-                let found = false;
-                for (let i = startIndex; i >= 0; i--) {
-                  if (lines[i] === "Finished match") {
-                    startIndex = i + 1;
-                    found = true;
-                    break;
-                  }
-                }
-                if (!found) startIndex = 0;
-
-                // Walk backwards to find end of current game
-                found = false;
-                for (let i = endIndex; i > startIndex; i--) {
-                  if (lines[i] === "Finished match") {
-                    endIndex = i + 1;
-                    found = true;
-                    break;
-                  }
-                }
-                if (!found) endIndex = lines.length;
-
-                downloadLogLines(lines.slice(startIndex, endIndex), gameIndex);
-                setLoading(false);
-              });
-          }}
-        >
-          {loading ? <Spin /> : <LuDownload />}
-        </Button>
-      );
-    }
-    // For past events, link to the compressed archive
-    else {
-      return (
-        <Button
-          title="Download UCI logs"
-          onClick={async () => {
-            setLoading(true);
-            const gameIndex = Number(activeGame?.gameDetails.gameNr);
-
-            const res = await fetch(
-              `https://ctv.yoshie2000.de/tcec/loglive/archive/${toTitleCaseTCEC(useEventStore.getState().activeEvent?.tournamentDetails.tNr ?? "")}.log.xz`
-            );
-            if (!res.ok) {
-              alert(`Error ${res.status}`);
-              setLoading(false);
-            }
-
-            const reader = new XzReadableStream(res.body!).getReader();
-            const decoder = new TextDecoder();
-            let tail = "";
-
-            const buffer: string[] = [];
-            let isCurrentGame = false;
-            let finished = false;
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              const chunk = tail + decoder.decode(value, { stream: true });
-              const lines = chunk.split("\n");
-              tail = lines.pop()!; // Last element is a partial line, prepend it next turn
-
-              for (const line of lines) {
-                if (line.startsWith(`Started game ${gameIndex} `))
-                  isCurrentGame = true;
-
-                // Keep one game in the buffer at a time
-                buffer.push(line);
-                if (line.startsWith(`Finished`)) {
-                  if (isCurrentGame) {
-                    finished = true;
-                    break;
-                  }
-
-                  buffer.length = 0;
-                }
-              }
-
-              if (finished) {
-                // Abort the rest of the request
-                await reader.cancel();
-                break;
-              }
-            }
-
-            downloadLogLines(buffer, gameIndex);
+          const res = await fetch(
+            isEventRunning
+              ? // For live events, pull the data from https://tcec-chess.com/live.log
+                "https://ctv.yoshie2000.de/tcec/live.log"
+              : // For past events, link to the compressed archive
+                `https://ctv.yoshie2000.de/tcec/loglive/archive/${toTitleCaseTCEC(useEventStore.getState().activeEvent?.tournamentDetails.tNr ?? "")}.log.xz`
+          );
+          if (!res.ok) {
+            alert(`Error ${res.status}`);
             setLoading(false);
-          }}
-        >
-          {loading ? <Spin /> : <LuDownload />}
-        </Button>
-      );
-    }
+          }
+
+          await downloadGameLogs(
+            isEventRunning ? res.body! : new XzReadableStream(res.body!),
+            gameIndex
+          );
+          setLoading(false);
+        }}
+      >
+        {loading ? <Spin /> : <LuDownload />}
+      </Button>
+    );
   }
 }
