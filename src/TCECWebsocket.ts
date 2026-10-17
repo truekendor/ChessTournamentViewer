@@ -95,7 +95,7 @@ export class TCECWebSocket implements TournamentWebSocket {
         }
 
         // Round is needed for the kibitzer endpoints
-        const round = game.getHeaders()["Round"];
+        const round = game.getHeaders()["Round"].replace(/0$/, "");
         // The schedule link is different for the ongoing event
         const isLive =
           crosstable.Event.replaceAll(" ", "_").toLowerCase() ===
@@ -154,7 +154,7 @@ export class TCECWebSocket implements TournamentWebSocket {
           return;
         }
 
-        const round = game.getHeaders()["Round"];
+        const round = game.getHeaders()["Round"].replace(/0$/, "");
 
         const [lc0Response, sfResponse] = await Promise.allSettled([
           fetch(
@@ -509,11 +509,11 @@ export class TCECWebSocket implements TournamentWebSocket {
   ) {
     const lc0Valid =
       lc0 &&
-      String(lc0.round) === this.game.getHeaders()["Round"] &&
+      String(lc0.round) === this.game.getHeaders()["Round"].replace(/0$/, "") &&
       "desc" in lc0;
     const sfValid =
       sf &&
-      String(sf.round) === this.game.getHeaders()["Round"] &&
+      String(sf.round) === this.game.getHeaders()["Round"].replace(/0$/, "") &&
       "desc" in sf;
 
     if (lc0Valid && lc0.desc) {
