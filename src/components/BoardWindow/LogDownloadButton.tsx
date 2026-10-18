@@ -8,6 +8,51 @@ import {
   handleLiveLogDownload,
 } from "./LogDownloadHelpers";
 
+async function downloadGameLogs(
+  stream: ReadableStream<Uint8Array>,
+  gameIndex: number
+) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let tail = "";
+
+  const buffer: string[] = [];
+  let isCurrentGame = false;
+  let finished = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = tail + decoder.decode(value, { stream: true });
+    const lines = chunk.split("\n");
+    tail = lines.pop()!; // Last element is a partial line, prepend it next turn
+
+    for (const line of lines) {
+      if (line.startsWith(`Started game ${gameIndex} `)) isCurrentGame = true;
+
+      // Keep one game in the buffer at a time
+      buffer.push(line);
+      if (line.startsWith(`Finished`)) {
+        if (isCurrentGame) {
+          finished = true;
+          break;
+        }
+
+        buffer.length = 0;
+      }
+    }
+
+    if (finished) {
+      // Abort the rest of the request
+      await reader.cancel();
+      break;
+    }
+  }
+
+  downloadLogLines(buffer, gameIndex);
+}
+
 export default function LogDownloadButton() {
   const [loading, setLoading] = useState(false);
 
