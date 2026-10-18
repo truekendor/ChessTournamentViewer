@@ -2,6 +2,44 @@ import { useEventStore } from "@/context/EventContext";
 import { toTitleCaseTCEC } from "@/utils";
 import { XzReadableStream } from "xz-decompress";
 
+function logDownloadProgress(bytesDownloaded: number, totalBytes: number) {
+  const megabytes = (bytesDownloaded / (1024 * 1024)).toFixed(2);
+  const totalMegabytes = (totalBytes / (1024 * 1024)).toFixed(2);
+  const percentage =
+    totalBytes > 0
+      ? `${Math.min((bytesDownloaded / totalBytes) * 100, 100).toFixed(1)}%`
+      : "unknown";
+
+  console.log(
+    `Log download progress: ${megabytes} / ${totalBytes > 0 ? totalMegabytes : "unknown"} MB (${percentage})`
+  );
+}
+
+function trackDownloadProgress(
+  body: ReadableStream<Uint8Array>,
+  totalBytes: number
+) {
+  const reader = body.getReader();
+  let bytesDownloaded = 0;
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+
+      bytesDownloaded += value.byteLength;
+      logDownloadProgress(bytesDownloaded, totalBytes);
+      controller.enqueue(value);
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+}
+
 function downloadLogLines(lines: string[], gameIndex: number) {
   // Auto-download as blob URL
   const uciLog = lines.join("\n");
@@ -35,7 +73,20 @@ export async function handleLiveLogDownload(
       signal: abortControllerRef.current.signal,
     });
 
-    const responseText = await response.text();
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+    const totalBytes = Number(response.headers.get("content-length")) || 0;
+    const reader = trackDownloadProgress(
+      response.body!,
+      totalBytes
+    ).getReader();
+    const decoder = new TextDecoder();
+    let responseText = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      responseText += decoder.decode(value, { stream: true });
+    }
+    responseText += decoder.decode();
     const lines = responseText.split("\n");
 
     // Find starting and ending window (not exact)
@@ -105,7 +156,9 @@ export async function handleArchiveLogDownload(
     );
     if (!res.ok) throw new Error(`Error ${res.status}`);
 
-    const reader = new XzReadableStream(res.body!).getReader();
+    const totalBytes = Number(res.headers.get("content-length")) || 0;
+    const trackedBody = trackDownloadProgress(res.body!, totalBytes);
+    const reader = new XzReadableStream(trackedBody).getReader();
     const decoder = new TextDecoder();
     let tail = "";
 
